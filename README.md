@@ -23,6 +23,7 @@ docs/
   telemetry-events.md
   testing-plan.md
   transfer-checklist.md
+  importing-into-n8n.md
 
 prompts/
   01-creative-interpretation.md
@@ -50,6 +51,9 @@ examples/
   final-story-package.example.json
   telemetry-events.example.json
   test-prompts.md
+
+workflows/
+  ghostwriter-story-generator-v2.import.json
 ```
 
 ## Core Workflow Design
@@ -229,12 +233,25 @@ Schemas in `schemas/` define the stable contracts between nodes. At transfer tim
 
 Detailed roadmap: `docs/build-roadmap.md`.
 
+
+## Importable n8n Workflow
+
+This repository now includes a single importable n8n workflow JSON file:
+
+```text
+workflows/ghostwriter-story-generator-v2.import.json
+```
+
+Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, callback-ready HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
+
+After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and optionally `GHOSTWRITER_CALLBACK_TOKEN` in n8n. Do not hardcode real API keys in the workflow JSON.
+
 ## Transfer Path
 
 1. Read `docs/workflow-overview.md`.
-2. Recreate the workflow from `docs/node-by-node-build.md`.
-3. Paste each prompt from `prompts/` into the matching AI node.
-4. Add parsing and validation nodes using `schemas/`.
+2. Import `workflows/ghostwriter-story-generator-v2.import.json` into n8n or recreate the workflow from `docs/node-by-node-build.md`.
+3. Follow `docs/importing-into-n8n.md` to configure environment variables and review placeholder Gemini HTTP Request nodes.
+4. Verify prompts from `prompts/` and parsing/validation behavior against `schemas/`.
 5. Test with `examples/input-payload.json` and `examples/test-prompts.md`.
 6. Complete `docs/transfer-checklist.md`.
 7. Only after n8n testing, export a real n8n workflow artifact if needed.
