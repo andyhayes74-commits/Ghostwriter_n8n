@@ -1,18 +1,91 @@
 # Ghostwriter n8n
 
-## Overview
+## v2.0 Status
 
-Ghostwriter n8n is a structured AI narrative orchestration workflow designed for use with the Ghostwriter Automation WordPress plugin.
+Ghostwriter n8n is now a **v2.0 transfer-ready workflow specification package** for recreating a Ghostwriter Story Generator workflow in n8n.
 
-The system transforms a tiny user prompt into a fully structured story artifact through staged creative interpretation, narrative planning, storyboard generation, drafting, editorial continuity checking, and final packaging.
+This repository contains documentation, prompts, JSON schemas, examples, test cases, validation guidance, and a transfer checklist. It is not a live n8n export yet, and it does not claim that a WordPress callback endpoint already exists.
 
-This is not a simple prompt wrapper.
+## Repository Purpose
 
-The workflow is designed as a procedural narrative production pipeline.
+Ghostwriter n8n specifies an AI narrative orchestration workflow that transforms a compact user idea into a structured final story package through staged interpretation, planning, drafting, editing, polishing, cover brief creation, telemetry, and optional callback-ready packaging.
 
----
+The goal is to provide everything needed to recreate or import the workflow into n8n later without inventing the design during transfer.
 
-# Core System Philosophy
+## Required v2.0 Package Structure
+
+```text
+docs/
+  workflow-overview.md
+  node-by-node-build.md
+  build-roadmap.md
+  wordpress-integration-contract.md
+  telemetry-events.md
+  testing-plan.md
+  transfer-checklist.md
+  importing-into-n8n.md
+
+prompts/
+  01-creative-interpretation.md
+  02-story-bible.md
+  03-story-architecture.md
+  04-storyboard-builder.md
+  05-section-drafter.md
+  06-continuity-editor.md
+  07-final-polish.md
+  08-cover-brief.md
+
+schemas/
+  creative-interpretation.schema.json
+  story-bible.schema.json
+  story-architecture.schema.json
+  storyboard.schema.json
+  section-draft.schema.json
+  continuity-report.schema.json
+  final-story-package.schema.json
+  telemetry-event.schema.json
+  wordpress-callback.schema.json
+
+examples/
+  input-payload.json
+  final-story-package.example.json
+  telemetry-events.example.json
+  test-prompts.md
+
+workflows/
+  ghostwriter-story-generator-v2.import.json
+```
+
+## Core Workflow Design
+
+The transfer target is a single n8n workflow:
+
+```text
+Webhook or Manual Trigger
+→ Normalize Input
+→ Validate Input
+→ Creative Interpretation
+→ Length Profile Selection
+→ Narrative Framework Selection
+→ Act Structure Selection
+→ Story Bible
+→ Story Architecture
+→ Storyboard
+→ Split Storyboard Sections
+→ Loop Over Sections
+→ Draft Each Section
+→ Merge Drafted Sections
+→ Continuity / Editorial Check
+→ Final Polish
+→ Cover Brief Generation
+→ Final Story Package
+→ Telemetry Events
+→ Optional Callback Payload
+```
+
+The workflow is intentionally not split into separate workflows by length. Length profile, framework, act structure, scene count, and drafting section count are selected dynamically.
+
+## Design Principles
 
 The workflow should:
 
@@ -22,578 +95,175 @@ The workflow should:
 - maintain pacing and emotional progression
 - preserve thematic consistency
 - produce stories that feel intentionally structured
+- validate strict JSON contracts between every AI stage
+- fail transparently when inputs or model outputs are invalid
 
 The workflow should avoid:
 
 - rigid fixed chapter counts
+- hardcoding exactly three chapters or three sections
 - bloated filler prose
-- aimless scene generation
 - disconnected emotional beats
-- purely reactive text generation
+- grammar-only editing in place of narrative continuity review
+- false claims that n8n import or WordPress integration has already happened
 
----
+## Length Profiles
 
-# High-Level Workflow
+The creative interpretation stage chooses the smallest suitable story length.
 
-```text
-User Prompt
-↓
-Creative Interpretation
-↓
-Narrative Framework Selection
-↓
-Act Structure Selection
-↓
-Story Architecture
-↓
-Storyboard Generation
-↓
-Dynamic Section Drafting
-↓
-Continuity & Editorial Pass
-↓
-Final Story Packaging
-↓
-Cover Brief Generation
-↓
-WordPress Callback
-```
+| Profile | Target Words | Notes |
+|---|---:|---|
+| Micro fiction | 250-500 | Internal mode or special handling; public mode should generally raise very small requests to at least 500 words. |
+| Flash fiction | 500-1,000 | Public mode allowed. |
+| Short story | 1,500-3,500 | Public mode allowed. |
+| Long short story | 4,000-7,500 | Initial public website cap. |
+| Novelette | 7,500-17,500 | Internal mode only until scaling is approved. |
+| Novella | 17,500-40,000 | Internal mode only until scaling is approved. |
 
----
+Public website generation initially caps at `long_short_story` and 7,500 target words.
 
-# System Components
+## Narrative Frameworks
 
-## WordPress Plugin
+Creative interpretation selects one primary narrative framework:
 
-Responsible for:
+- **Emotional Character Arc:** isolation, disruption, resistance, connection, vulnerability, transformation.
+- **Mystery Discovery Arc:** normal state, strange discovery, investigation, escalation, revelation, consequence.
+- **Adventure Escalation Arc:** call to action, obstacle, progress, major setback, final confrontation, resolution.
+- **Tragic Spiral:** desire, compromise, escalation, collapse, loss, aftermath.
+- **Circular Fairytale Structure:** lack, journey into strange world, symbolic encounters, emotional revelation, transformed return.
 
-- frontend display
-- workflow animation window
-- story collections
-- modal reader
-- story library
-- visitor interaction
-- session handling
+## Act Structures
 
-## n8n Workflow
+Creative interpretation also selects one macro act structure:
 
-Responsible for:
+- **3-Act Structure:** setup, escalation, resolution.
+- **4-Act Escalation Structure:** establish flaw/world, change, crisis or confrontation, resolution and aftermath.
+- **Hero Transformation Structure:** incomplete self, resistance and journey, transformation event, return changed.
+- **Mystery Revelation Structure:** question, clues, false theories, revelation, consequence.
 
-- orchestration
-- AI routing
-- generation logic
-- continuity management
-- telemetry generation
-- final packaging
+## Storyboard System
 
-## AI Models
-
-Planned usage:
-
-| Role | Suggested Model |
-|---|---|
-| Creative interpretation | Gemini |
-| Story bible | Gemini |
-| Story architecture | Gemini |
-| Drafting | Gemini or cheaper drafting model |
-| Continuity editor | Gemini Pro |
-| Cover prompt generation | Gemini |
-
----
-
-# Narrative System Design
-
-## Creative Interpretation
-
-The workflow should determine:
-
-- genre
-- tone
-- themes
-- emotional direction
-- length profile
-- narrative framework
-- act structure
-
-Example output:
-
-```json
-{
-  "interpreted_genre": "Whimsical fantasy",
-  "tone": "bittersweet, warm, gently comic",
-  "themes": ["loneliness", "belonging"],
-  "recommended_length_profile": "short_story",
-  "target_word_count": 2200,
-  "selected_story_structure": "circular_fairytale",
-  "selected_act_structure": "4_act_escalation"
-}
-```
-
----
-
-# Length Profiles
-
-The workflow should automatically choose the smallest suitable story structure.
-
-| Profile | Target Words |
-|---|---:|
-| Micro fiction | 250–500 |
-| Flash fiction | 500–1,000 |
-| Short story | 1,500–3,500 |
-| Long short story | 4,000–7,500 |
-| Novelette | 7,500–17,500 |
-| Novella | 17,500–40,000 |
-
-Public website generation should initially cap at:
-
-```text
-Long short story
-```
-
----
-
-# Narrative Framework Library
-
-The workflow should select a suitable narrative framework.
-
-## Emotional Character Arc
-
-```text
-Isolation
-↓
-Disruption
-↓
-Resistance
-↓
-Connection
-↓
-Vulnerability
-↓
-Transformation
-```
-
-## Mystery Discovery Arc
-
-```text
-Normal state
-↓
-Strange discovery
-↓
-Investigation
-↓
-Escalation
-↓
-Revelation
-↓
-Consequence
-```
-
-## Adventure Escalation Arc
-
-```text
-Call to action
-↓
-Obstacle
-↓
-Progress
-↓
-Major setback
-↓
-Final confrontation
-↓
-Resolution
-```
-
-## Tragic Spiral
-
-```text
-Desire
-↓
-Compromise
-↓
-Escalation
-↓
-Collapse
-↓
-Loss
-↓
-Aftermath
-```
-
-## Circular Fairytale Structure
-
-```text
-Character lacks something
-↓
-Journey into strange world
-↓
-Symbolic encounters
-↓
-Emotional revelation
-↓
-Return transformed
-```
-
----
-
-# Act Structures
-
-The workflow should also select a macro story progression system.
-
-## 3-Act Structure
-
-```text
-Act 1: Setup
-Act 2: Escalation
-Act 3: Resolution
-```
-
-## 4-Act Escalation Structure
-
-```text
-Act 1: Establish flaw/world
-Act 2: Something changes
-Act 3: Crisis or confrontation
-Act 4: Resolution and aftermath
-```
-
-## Hero Transformation Structure
-
-```text
-Act 1: Character incomplete
-Act 2: Resistance and journey
-Act 3: Transformation event
-Act 4: Return changed
-```
-
----
-
-# Storyboard System
-
-The storyboard acts as the executable narrative plan.
-
-Each scene should define:
+The storyboard is the executable narrative plan before drafting. Each section defines:
 
 - what happens
 - why it happens
-- emotional progression
-- motifs introduced
+- act mapping
 - narrative purpose
+- emotional progression
+- motifs introduced or resolved
+- target word budget
+- continuity obligations
+- drafting constraints
 
-Example:
+n8n splits the storyboard section array into loop items, drafts each section, then merges results in order. This supports flash fiction, short stories, long short stories, novelettes, and novellas with one workflow.
 
-```json
-{
-  "scene": 1,
-  "summary": "Jim watches other frogs rehearsing songs.",
-  "purpose": "Show loneliness and social pressure.",
-  "emotional_shift": "comfort → shame",
-  "motifs": ["music", "distance", "lantern light"]
-}
-```
+## Continuity and Editorial Pass
 
----
-
-# Drafting System
-
-The workflow should dynamically generate sections based on the storyboard.
-
-No fixed chapter count should exist.
-
-The same workflow should support:
-
-- 1-scene flash fiction
-- 3-section short stories
-- 7-section long stories
-
-using a single drafting loop.
-
----
-
-# Continuity & Editorial Pass
-
-Gemini Pro should receive:
+The continuity editor compares the merged prose against:
 
 - original prompt
 - creative interpretation
 - story bible
-- act structure
+- selected act structure
+- selected narrative framework
+- story architecture
 - storyboard
-- all drafted sections
-
-The editor should validate:
-
-- character consistency
-- emotional progression
-- thematic cohesion
-- pacing
-- unresolved motifs
-- structural integrity
-- ending satisfaction
-
-The editor should behave like:
-
-```text
-Narrative editor
-```
-
-not:
-
-```text
-Grammar checker
-```
-
----
-
-# WordPress Integration Goal
-
-Final workflow output should eventually be sent back to WordPress.
-
-Example final payload:
-
-```json
-{
-  "session_id": "gw_123456",
-  "status": "complete",
-  "result": {
-    "title": "The Last Song of Jim",
-    "author_name": "Andy Hayes",
-    "genre": "Whimsical Fantasy",
-    "synopsis": "A lonely frog discovers that love is not earned by singing the loudest.",
-    "story_body": "...",
-    "cover_prompt": "...",
-    "cover_image_url": null
-  }
-}
-```
-
----
-
-# Build Roadmap
-
-## v1.0 — Local Logic Prototype
-
-Build core logic only.
-
-Includes:
-
-- manual trigger
-- creative interpretation
-- story bible
-- narrative structure selection
-- storyboard generation
-- drafting loop
-- continuity pass
-- final output
-
-No WordPress.
-No webhooks.
-No image generation.
-
----
-
-## v1.1 — JSON Contract Stabilisation
-
-Define strict schemas for:
-
-- creative interpretation
-- story bible
-- architecture
-- storyboard
-- continuity report
-- final package
-
-Goal:
-
-Prevent broken downstream nodes.
-
----
-
-## v1.2 — Dynamic Drafting Loop
-
-Implement:
-
-```text
-Storyboard
-↓
-Split Sections
-↓
-Loop Over Items
-↓
-Draft Each Section
-↓
-Merge Drafts
-```
-
-Goal:
-
-Support variable story sizes using one workflow.
-
----
-
-## v1.3 — Editorial Continuity Pass
-
-Implement Gemini Pro editorial validation.
-
-Checks:
-
-- continuity
-- pacing
-- emotional arc
-- structural integrity
-- unresolved motifs
-
----
-
-## v1.4 — Final Story Packaging
-
-Create stable final package object.
-
-Includes:
-
-- metadata
-- story body
-- structure
-- cover brief
-- automation notes
-
----
-
-## v1.5 — Error Handling & Guardrails
-
-Add:
-
-- prompt validation
-- word-count caps
-- fallback behaviour
-- stage failure reporting
-- JSON validation
-
-Public limits:
-
-```text
-Minimum: 500 words
-Maximum: 7,500 words
-```
-
----
-
-## v1.6 — Webhook Input Mode
-
-Replace manual trigger with webhook trigger.
-
-Input:
-
-```json
-{
-  "session_id": "test_001",
-  "story_prompt": "A frog named Jim who can't find love"
-}
-```
-
----
-
-## v1.7 — Telemetry Events
-
-Generate workflow progress events.
-
-Example:
-
-```json
-{
-  "stage": "storyboard",
-  "progress": 45,
-  "message": "Designing scene beats and act progression."
-}
-```
-
-These will later power the frontend animation window.
-
----
-
-## v1.8 — WordPress Callback Ready
-
-Prepare:
-
-- progress callbacks
-- failure callbacks
-- final story callbacks
-
-No hard dependency on WordPress yet.
-
----
-
-## v1.9 — Cover Image Integration Stub
-
-Generate:
-
-- cover prompts
 - motifs
-- palettes
-- placeholder image URL field
+- emotional arc
+- section continuity obligations
 
-Image generation itself can be added later.
+The editor acts as a narrative editor, not a grammar checker. It identifies continuity problems, pacing issues, unresolved motifs, prompt drift, weak structural alignment, and ending satisfaction concerns.
 
----
+## Cover Image Integration Stub
 
-## v2.0 — Ready-to-Transfer n8n Build
+Cover image generation is not implemented in v2.0. The workflow specification includes cover brief generation only.
 
-Deliver:
+The final package includes:
 
-- node-by-node workflow specification
-- prompt pack
-- JSON schemas
-- telemetry definitions
-- test prompts
-- transfer checklist
-
-At v2.0 the system should be:
-
-- logically complete
-- schema-defined
-- prompt-defined
-- ready to recreate/import into n8n
-- ready to connect to WordPress later
-
----
-
-# Recommended Development Philosophy
-
-Build:
-
-```text
-Structure first
-Automation second
-Presentation third
-Scale last
+```json
+{
+  "cover_brief": {
+    "prompt": "...",
+    "negative_prompt": "...",
+    "palette": [],
+    "visual_motifs": [],
+    "composition": "...",
+    "lighting": "...",
+    "typography_notes": "...",
+    "aspect_ratio": "2:3"
+  },
+  "cover_image_url": null
+}
 ```
 
-The system should prioritise:
+## WordPress Callback-Ready Contract
 
-- narrative quality
-- pacing
-- emotional coherence
-- intentional structure
+The final workflow design is callback-ready for a future WordPress plugin endpoint. The contract supports progress, failure, and complete payloads, but this repository does not claim that endpoint already exists.
 
-before adding:
+See `docs/wordpress-integration-contract.md` and `schemas/wordpress-callback.schema.json` before implementing WordPress delivery.
 
-- image generation
-- realtime orchestration
-- public scaling
-- moderation systems
+## Prompt Pack
 
----
+All prompts in `prompts/` are written for strict JSON-only output and are suitable for Gemini API-style calls. Each AI stage has a corresponding schema and should be followed by JSON parsing and validation in n8n.
 
-# Repository Purpose
+## JSON Schemas
 
-This repository exists to develop:
+Schemas in `schemas/` define the stable contracts between nodes. At transfer time, n8n should validate each AI output before downstream nodes consume it. Invalid JSON should be repaired once, then routed to a structured failure path if repair fails.
+
+## Examples and Tests
+
+- `examples/input-payload.json` provides a webhook/manual test payload.
+- `examples/final-story-package.example.json` shows the expected final package shape.
+- `examples/telemetry-events.example.json` shows progress event examples.
+- `examples/test-prompts.md` covers fiction, non-fiction, public cap behavior, internal long-form behavior, and guardrails.
+
+## Build Roadmap Summary
+
+- **v1.0:** Local logic prototype specification.
+- **v1.1:** JSON contract stabilisation.
+- **v1.2:** Dynamic drafting loop design.
+- **v1.3:** Editorial continuity pass.
+- **v1.4:** Final story package.
+- **v1.5:** Error handling and guardrails.
+- **v1.6:** Webhook input mode.
+- **v1.7:** Telemetry events.
+- **v1.8:** WordPress callback-ready design.
+- **v1.9:** Cover image integration stub.
+- **v2.0:** Ready-to-transfer n8n build package.
+
+Detailed roadmap: `docs/build-roadmap.md`.
+
+
+## Importable n8n Workflow
+
+This repository now includes a single importable n8n workflow JSON file:
 
 ```text
-An AI narrative orchestration workflow
+workflows/ghostwriter-story-generator-v2.import.json
 ```
 
-not merely:
+Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, callback-ready HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
 
-```text
-an AI story prompt generator
-```
+After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and optionally `GHOSTWRITER_CALLBACK_TOKEN` in n8n. Do not hardcode real API keys in the workflow JSON.
+
+## Transfer Path
+
+1. Read `docs/workflow-overview.md`.
+2. Import `workflows/ghostwriter-story-generator-v2.import.json` into n8n or recreate the workflow from `docs/node-by-node-build.md`.
+3. Follow `docs/importing-into-n8n.md` to configure environment variables and review placeholder Gemini HTTP Request nodes.
+4. Verify prompts from `prompts/` and parsing/validation behavior against `schemas/`.
+5. Test with `examples/input-payload.json` and `examples/test-prompts.md`.
+6. Complete `docs/transfer-checklist.md`.
+7. Only after n8n testing, export a real n8n workflow artifact if needed.
+
+## Definition of Done for This Repository
+
+- README reflects v2.0 completion.
+- Required folders and files exist.
+- Every schema is valid JSON Schema syntax.
+- Every AI prompt asks for strict JSON-only output.
+- Node-by-node instructions are detailed enough to recreate the workflow in n8n.
+- Test prompts cover fiction and non-fiction.
+- Transfer checklist is practical and step-by-step.
+- No false claims are made that the workflow is already imported into n8n.
+- No false claims are made that live WordPress integration already exists.

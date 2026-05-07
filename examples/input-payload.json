@@ -1,0 +1,19 @@
+{
+  "session_id": "gw_20260507_001",
+  "story_prompt": "A frog named Jim cannot find love because he sings too loudly for the pond, until a quiet moth teaches him to listen to the night.",
+  "author_name": "Andy Hayes",
+  "mode": "public",
+  "requested_length_profile": "short_story",
+  "callback_url": null,
+  "metadata": {
+    "source": "manual_test",
+    "campaign": "v2_transfer_readiness"
+  },
+  "constraints": {
+    "content_rating": "general",
+    "avoid": [
+      "graphic violence",
+      "cruel ending"
+    ]
+  }
+}

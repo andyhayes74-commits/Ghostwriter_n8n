@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Story Architecture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "length_profile",
+    "target_word_count",
+    "selected_narrative_framework",
+    "selected_act_structure",
+    "acts",
+    "framework_beats",
+    "pacing_plan",
+    "word_budget",
+    "section_strategy",
+    "architecture_notes",
+    "risks"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "length_profile": {
+      "type": "string",
+      "enum": [
+        "micro_fiction",
+        "flash_fiction",
+        "short_story",
+        "long_short_story",
+        "novelette",
+        "novella"
+      ]
+    },
+    "target_word_count": {
+      "type": "integer",
+      "minimum": 250,
+      "maximum": 40000
+    },
+    "selected_narrative_framework": {
+      "type": "string",
+      "enum": [
+        "emotional_character_arc",
+        "mystery_discovery_arc",
+        "adventure_escalation_arc",
+        "tragic_spiral",
+        "circular_fairytale_structure"
+      ]
+    },
+    "selected_act_structure": {
+      "type": "string",
+      "enum": [
+        "three_act_structure",
+        "four_act_escalation_structure",
+        "hero_transformation_structure",
+        "mystery_revelation_structure"
+      ]
+    },
+    "acts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "act_id",
+          "name",
+          "purpose",
+          "target_word_count",
+          "beats",
+          "emotional_state_start",
+          "emotional_state_end"
+        ],
+        "properties": {
+          "act_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "target_word_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "beats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emotional_state_start": {
+            "type": "string"
+          },
+          "emotional_state_end": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "framework_beats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "beat_name",
+          "story_function"
+        ],
+        "properties": {
+          "beat_name": {
+            "type": "string"
+          },
+          "story_function": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pacing_plan": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "word_budget": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "section_strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "estimated_section_count",
+        "grouping_logic",
+        "dynamic_loop_notes"
+      ],
+      "properties": {
+        "estimated_section_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "grouping_logic": {
+          "type": "string"
+        },
+        "dynamic_loop_notes": {
+          "type": "string"
+        }
+      }
+    },
+    "architecture_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

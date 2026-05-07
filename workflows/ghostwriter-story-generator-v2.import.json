@@ -1,0 +1,2034 @@
+{
+  "name": "Ghostwriter Story Generator v2.0",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "209a80ae-ceb4-4817-9ee5-06ce12358889",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ghostwriter/v2/story",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8e364df5-25f6-4437-b513-ec15f61e68ee",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.body ?? $json;\nconst input = {\n  session_id: raw.session_id || raw.input?.session_id || `manual_${Date.now()}`,\n  story_prompt: raw.story_prompt || raw.input?.story_prompt || 'A frog named Jim cannot find love because he sings too loudly for the pond, until a quiet moth teaches him to listen to the night.',\n  author_name: raw.author_name || raw.input?.author_name || 'Ghostwriter',\n  mode: raw.mode || raw.input?.mode || 'public',\n  requested_length_profile: raw.requested_length_profile || raw.input?.requested_length_profile || null,\n  callback_url: raw.callback_url || raw.input?.callback_url || null,\n  metadata: raw.metadata || raw.input?.metadata || {},\n  constraints: raw.constraints || raw.input?.constraints || { content_rating: 'general', avoid: [] }\n};\nreturn [{ json: { input, telemetry_events: [], raw_input: raw } }];"
+      },
+      "id": "c6340108-2a80-474d-a1da-7142adbc9a04",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'complete',\n  progress: 2,\n  message: 'Request accepted and normalized.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "ede5b70a-9a67-4836-96eb-04313e283528",
+      "name": "Emit Accepted Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst input = item.input;\nconst errors = [];\nif (!input.session_id || typeof input.session_id !== 'string') errors.push('session_id is required.');\nif (!input.story_prompt || typeof input.story_prompt !== 'string' || input.story_prompt.trim().length < 10) errors.push('story_prompt must be at least 10 characters.');\nif (input.story_prompt && input.story_prompt.length > 2000) errors.push('story_prompt must be 2,000 characters or fewer.');\nif (!['public','internal'].includes(input.mode)) errors.push('mode must be public or internal.');\nconst events = item.telemetry_events || [];\nevents.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:input.session_id || 'unknown', stage:'validate_input', status: errors.length ? 'failed' : 'complete', progress:5, message: errors.length ? 'Input validation failed.' : 'Input validated.', timestamp:new Date().toISOString(), severity: errors.length ? 'error' : 'info', details:{errors}});\nreturn [{ json: { ...item, telemetry_events: events, input_valid: errors.length === 0, validation_errors: errors } }];"
+      },
+      "id": "fc7fb860-a235-4bb9-aeb0-c49c38071361",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "input-valid",
+              "leftValue": "={{$json.input_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "c0c08af3-dc74-4c64-b267-da97474d0a70",
+      "name": "Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst input = item.input || {};\nconst error = { stage:'validate_input', error_code:'INVALID_INPUT', message:(item.validation_errors || ['Invalid input.']).join(' '), retryable:true };\nconst failure_payload = { session_id: input.session_id || 'unknown', callback_type:'failure', status:'failed', error };\nreturn [{ json: { ...item, workflow_failed:true, error, callback_payload: failure_payload, response: failure_payload } }];"
+      },
+      "id": "57debe8f-5312-4e04-a251-779c1d5a748b",
+      "name": "Validation Failure Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 01 \u2014 Creative Interpretation Prompt\n\nYou are the creative interpretation stage for the Ghostwriter n8n workflow. Interpret the user's premise into a narrative strategy for a single dynamic workflow.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- \\`session_id\\`\n- \\`story_prompt\\`\n- \\`author_name\\`\n- \\`mode\\`: \\`public\\` or \\`internal\\`\n- \\`requested_length_profile\\`\n- \\`constraints\\`\n- \\`metadata\\`\n\n## Requirements\n\n- Select a length profile during this stage.\n- Use the smallest suitable story structure that can satisfy the premise.\n- Do not hardcode exactly three chapters.\n- Public mode must cap at \\`long_short_story\\` and target words from 500 to 7500.\n- Internal mode may select \\`micro_fiction\\`, \\`flash_fiction\\`, \\`short_story\\`, \\`long_short_story\\`, \\`novelette\\`, or \\`novella\\`.\n- Select one narrative framework from: \\`emotional_character_arc\\`, \\`mystery_discovery_arc\\`, \\`adventure_escalation_arc\\`, \\`tragic_spiral\\`, \\`circular_fairytale_structure\\`.\n- Select one act structure from: \\`three_act_structure\\`, \\`four_act_escalation_structure\\`, \\`hero_transformation_structure\\`, \\`mystery_revelation_structure\\`.\n- Identify themes, tone, genre, audience rating, motifs, emotional direction, and planning risks.\n- If the request is non-fiction, choose a narrative non-fiction, essayistic, memoir, parable, or explanatory frame rather than forcing invented fantasy.\n\n## Output JSON Shape\n\nReturn an object matching \\`creative-interpretation.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`interpreted_genre\\`\n- \\`fictionality_mode\\`\n- \\`tone\\`\n- \\`themes\\`\n- \\`motifs\\`\n- \\`audience_rating\\`\n- \\`recommended_length_profile\\`\n- \\`target_word_count\\`\n- \\`public_cap_applied\\`\n- \\`selected_narrative_framework\\`\n- \\`selected_act_structure\\`\n- \\`emotional_direction\\`\n- \\`premise_complexity\\`\n- \\`suggested_section_count_range\\`\n- \\`creative_rationale\\`\n- \\`constraints_to_preserve\\`\n- \\`warnings\\`\n`;\nconst context = { input: item.input };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'creative_interpretation' } }];"
+      },
+      "id": "6f9a79a1-4719-4d5a-b34a-87f3da075767",
+      "name": "Build Creative Interpretation Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "b88a219f-7dc1-4741-ad1a-baf50bf594fe",
+      "name": "AI Creative Interpretation (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'creative_interpretation';\nconst targetKey = 'creative_interpretation';\nconst required = [\"session_id\", \"recommended_length_profile\", \"target_word_count\", \"selected_narrative_framework\", \"selected_act_structure\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "daf1212c-4373-45fb-86b8-18693a2c58e0",
+      "name": "Parse Creative Interpretation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "creative-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "57671b5a-6505-4b53-a94c-fbfdce14451e",
+      "name": "Creative JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst raw = item.creative_interpretation_raw || '';\nconst prompt = `Return strict JSON only. Repair this Gemini response so it matches schemas/creative-interpretation.schema.json. Do not change the meaning. Raw response:\n${raw}`;\nreturn [{ json: { ...item, prompt, repair_stage: 'creative_interpretation', workflow_failed: false } }];"
+      },
+      "id": "2eabd064-b6ce-4e18-9650-756c8d6d9b6c",
+      "name": "Build Creative JSON Repair Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "95b37fe5-1854-4ac5-8949-c7cd87fc25fa",
+      "name": "AI Repair Creative JSON (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2600,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'creative_interpretation';\nconst targetKey = 'creative_interpretation';\nconst required = [\"session_id\", \"recommended_length_profile\", \"target_word_count\", \"selected_narrative_framework\", \"selected_act_structure\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "744e8ba1-a4d4-472d-8e6e-ef19005ae691",
+      "name": "Parse Repaired Creative Interpretation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "creative-repaired-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "31aafaec-d953-4d54-8dd1-798a42e7123d",
+      "name": "Repaired Creative JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst ci = item.creative_interpretation;\nconst input = item.input;\nconst events = item.telemetry_events || [];\nlet capped = false;\nif (input.mode === 'public') {\n  if (['novelette','novella'].includes(ci.recommended_length_profile)) {\n    ci.recommended_length_profile = 'long_short_story';\n    ci.public_cap_applied = true;\n    capped = true;\n  }\n  ci.target_word_count = Math.max(500, Math.min(7500, ci.target_word_count || 2200));\n}\nif (capped) events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:input.session_id, stage:'creative_interpretation', status:'warning', progress:14, message:'Public mode capped requested long-form output at long short story.', timestamp:new Date().toISOString(), severity:'warning'});\nreturn [{ json: { ...item, creative_interpretation: ci, telemetry_events: events } }];"
+      },
+      "id": "6fcd310a-371d-4efa-ae6c-babc354d589c",
+      "name": "Enforce Length Profile and Public Cap",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'creative_interpretation',\n  status: 'complete',\n  progress: 12,\n  message: 'Premise interpreted and creative strategy selected.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "9d94ff32-a050-4fa0-bc83-1de04255d221",
+      "name": "Emit Interpretation Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 02 \u2014 Story Bible Prompt\n\nYou are the story bible stage for the Ghostwriter n8n workflow. Build continuity anchors that all later stages must obey.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original normalized input\n- Creative interpretation JSON\n- Selected length profile\n- Selected narrative framework\n- Selected act structure\n\n## Requirements\n\n- Preserve the original prompt's intent.\n- Define characters, roles, motivations, conflicts, relationships, and change vectors.\n- Define world rules or factual boundaries. For non-fiction, define factual stance and source limitations instead of inventing unsupported claims.\n- Define voice, style, point of view, tense, and pacing principles suitable for Gemini drafting.\n- Define motifs and how they should evolve.\n- Define continuity anchors that must be checked later.\n- Avoid filler and avoid a rigid fixed chapter count.\n\n## Output JSON Shape\n\nReturn an object matching \\`story-bible.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`title_working\\`\n- \\`logline\\`\n- \\`genre\\`\n- \\`tone\\`\n- \\`point_of_view\\`\n- \\`tense\\`\n- \\`voice_rules\\`\n- \\`characters\\`\n- \\`setting\\`\n- \\`themes\\`\n- \\`motifs\\`\n- \\`emotional_arc\\`\n- \\`conflict_model\\`\n- \\`continuity_anchors\\`\n- \\`style_constraints\\`\n- \\`nonfiction_boundaries\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'story_bible' } }];"
+      },
+      "id": "281b15a9-7c0f-465f-9e54-f2661d95e5d6",
+      "name": "Build Story Bible Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "80bc20cc-46a0-4175-9716-db6da178fa76",
+      "name": "AI Story Bible (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'story_bible';\nconst targetKey = 'story_bible';\nconst required = [\"session_id\", \"title_working\", \"logline\", \"characters\", \"motifs\", \"continuity_anchors\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "3a20cc26-9dbc-4aa3-bfb6-bd9534f8ed95",
+      "name": "Parse Story Bible",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3380,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "bible-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b83bc29b-aef9-4ace-9ef7-e576a908a72c",
+      "name": "Story Bible JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3640,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'story_bible',\n  status: 'complete',\n  progress: 22,\n  message: 'Story bible created.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "d9ed53b1-172a-4d3e-baca-b7f7907b800f",
+      "name": "Emit Story Bible Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3900,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 03 \u2014 Story Architecture Prompt\n\nYou are the story architecture stage for the Ghostwriter n8n workflow. Convert the creative strategy and story bible into a macro narrative plan.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original prompt\n- Creative interpretation JSON\n- Story bible JSON\n\n## Requirements\n\n- Use the selected narrative framework and act structure from creative interpretation.\n- Do not replace them unless impossible; if adjusted, explain in \\`architecture_notes\\`.\n- Allocate target words across acts dynamically.\n- Define beats that serve the emotional arc, motifs, and premise.\n- Support variable section counts based on premise complexity and length profile.\n- Include a drafting strategy for micro fiction through novella without separate workflows.\n\n## Output JSON Shape\n\nReturn an object matching \\`story-architecture.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`length_profile\\`\n- \\`target_word_count\\`\n- \\`selected_narrative_framework\\`\n- \\`selected_act_structure\\`\n- \\`acts\\`\n- \\`framework_beats\\`\n- \\`pacing_plan\\`\n- \\`word_budget\\`\n- \\`section_strategy\\`\n- \\`architecture_notes\\`\n- \\`risks\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation, story_bible: item.story_bible };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'story_architecture' } }];"
+      },
+      "id": "0ff0b93c-bb15-47a8-bc14-7d7c48893bfa",
+      "name": "Build Story Architecture Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "a6c1bf4d-06da-43fe-a1b0-d5fc26d8d9a4",
+      "name": "AI Story Architecture (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4420,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'story_architecture';\nconst targetKey = 'story_architecture';\nconst required = [\"session_id\", \"length_profile\", \"target_word_count\", \"selected_narrative_framework\", \"selected_act_structure\", \"acts\", \"section_strategy\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "1a97e2d1-d07b-49df-ad67-7db7c24072f5",
+      "name": "Parse Story Architecture",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4680,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "arch-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "1e8d3a06-f4aa-4317-8e90-8b3cc2df81fc",
+      "name": "Architecture JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4940,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'story_architecture',\n  status: 'complete',\n  progress: 32,\n  message: 'Story architecture created.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "7456b428-931a-4132-b508-da1e78d366be",
+      "name": "Emit Architecture Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5200,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 04 \u2014 Storyboard Builder Prompt\n\nYou are the storyboard builder stage for the Ghostwriter n8n workflow. Create the executable narrative plan used by the dynamic drafting loop.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original prompt\n- Creative interpretation JSON\n- Story bible JSON\n- Story architecture JSON\n\n## Requirements\n\n- The storyboard is the executable plan before drafting.\n- Create a dynamic \\`sections\\` array based on story length, premise complexity, and pacing.\n- Do not hardcode exactly three chapters or exactly three sections.\n- Each section must define what happens, why it happens, emotional progression, motifs, narrative purpose, act mapping, target words, and continuity obligations.\n- Make every section draftable independently while preserving whole-story continuity.\n- Include enough detail for the section drafter to write prose without inventing a new plot.\n\n## Output JSON Shape\n\nReturn an object matching \\`storyboard.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`storyboard_version\\`\n- \\`total_sections\\`\n- \\`target_word_count\\`\n- \\`sections\\`\n- \\`motif_tracker\\`\n- \\`emotional_arc_tracker\\`\n- \\`continuity_requirements\\`\n- \\`drafting_order\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation, story_bible: item.story_bible, story_architecture: item.story_architecture };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'storyboard' } }];"
+      },
+      "id": "c4354295-0711-47d3-9b15-0482f01967ea",
+      "name": "Build Storyboard Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5460,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "72de22ba-9a75-419c-b187-b7a58d7f6608",
+      "name": "AI Storyboard (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5720,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'storyboard';\nconst targetKey = 'storyboard';\nconst required = [\"session_id\", \"total_sections\", \"sections\", \"drafting_order\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "d1a8514d-1b45-4c87-93c2-6e4691bbbd43",
+      "name": "Parse Storyboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5980,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "storyboard-valid",
+              "leftValue": "={{$json.json_valid && Array.isArray($json.storyboard.sections) && $json.storyboard.sections.length > 0}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "cf613914-5c5b-47c0-b551-78b4cc5ca3b8",
+      "name": "Storyboard JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6240,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'storyboard',\n  status: 'complete',\n  progress: 45,\n  message: 'Executable storyboard plan created.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "3f8f4971-7565-4af4-bb84-7f49272262a0",
+      "name": "Emit Storyboard Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6500,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst sections = item.storyboard.sections || [];\nreturn sections.map((section, idx) => ({ json: {\n  ...item,\n  current_section: section,\n  previous_section_summary: idx > 0 ? sections[idx - 1].summary : null,\n  total_sections: sections.length\n}}));"
+      },
+      "id": "c03be23d-4b01-4507-9149-a949e3279456",
+      "name": "Split Storyboard Sections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6760,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "24718be7-4459-4777-b2c2-8c4fdd521909",
+      "name": "Loop Over Storyboard Sections",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        7020,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst section = item.current_section;\nconst total = item.total_sections || 1;\nconst progress = Math.min(75, Math.max(50, 50 + Math.floor((section.section_index / total) * 25)));\nconst events = item.telemetry_events || [];\nevents.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input.session_id, stage:'drafting', status:'running', progress, message:`Drafting section ${section.section_index} of ${total}.`, timestamp:new Date().toISOString(), severity:'info', details:{section_index:section.section_index,total_sections:total}});\nreturn [{ json: { ...item, telemetry_events: events, current_progress: progress } }];"
+      },
+      "id": "42cda57c-1278-4424-b14c-dba444c6cd54",
+      "name": "Emit Drafting Telemetry Per Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7280,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 05 \u2014 Section Drafter Prompt\n\nYou are the section drafter stage inside the Ghostwriter n8n dynamic loop. Draft only the current storyboard section.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original prompt\n- Creative interpretation JSON\n- Story bible JSON\n- Story architecture JSON\n- Complete storyboard summary\n- Current storyboard section\n- Previous section summary if available\n- Total section count\n\n## Requirements\n\n- Draft only the current section identified by \\`section_index\\`.\n- Fulfill the section's purpose, beats, motifs, emotional shift, and continuity obligations.\n- Do not summarize the whole story.\n- Do not draft future sections except through natural setup.\n- Respect target word count with reasonable tolerance.\n- Preserve voice, point of view, tense, character details, and world/factual boundaries.\n- If the section is non-fiction, do not invent factual claims beyond provided context.\n\n## Output JSON Shape\n\nReturn an object matching \\`section-draft.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`section_index\\`\n- \\`section_title\\`\n- \\`draft_text\\`\n- \\`actual_word_count\\`\n- \\`fulfilled_storyboard_items\\`\n- \\`motifs_used\\`\n- \\`continuity_notes\\`\n- \\`handoff_to_next_section\\`\n- \\`warnings\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation, story_bible: item.story_bible, story_architecture: item.story_architecture, storyboard: item.storyboard, current_section: item.current_section, previous_section_summary: item.previous_section_summary, total_sections: item.total_sections };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'section_drafter' } }];"
+      },
+      "id": "73a4ea65-6c2e-445c-97d4-5cdaa0e19524",
+      "name": "Build Section Draft Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7540,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "ea15a2b6-1ad2-418c-89de-e3b967fe8f4f",
+      "name": "AI Draft Section (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7800,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'section_drafter';\nconst targetKey = 'section_draft';\nconst required = [\"session_id\", \"section_index\", \"draft_text\", \"actual_word_count\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "9a5a5d92-b28b-4a45-b65e-4d63f27054c7",
+      "name": "Parse Section Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8060,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "draft-valid",
+              "leftValue": "={{$json.json_valid && $json.section_draft.section_index === $json.current_section.section_index}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "840586e0-45e7-459d-b33f-6b38ef079082",
+      "name": "Section Draft JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8320,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst staticData = $getWorkflowStaticData('node');\nif (!staticData.draft_sections || item.current_section.section_index === 1) staticData.draft_sections = [];\nstaticData.draft_sections.push(item.section_draft);\nreturn [{ json: { ...item, draft_sections: staticData.draft_sections } }];"
+      },
+      "id": "ce5d6c09-3b3a-498d-9fe1-aff3160d8888",
+      "name": "Collect Draft Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8580,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet last = items[items.length - 1]?.json || {};\nlet drafts = last.draft_sections || [];\nif (!drafts.length) {\n  drafts = items.map(i => i.json.section_draft).filter(Boolean);\n  last = items[0]?.json || last;\n}\ndrafts.sort((a,b) => a.section_index - b.section_index);\nconst story_body = drafts.map(d => d.draft_text).join('\\n\\n');\nconst actual_word_count = story_body.trim() ? story_body.trim().split(/\\s+/).length : 0;\nconst events = last.telemetry_events || [];\nevents.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:last.input?.session_id || 'unknown', stage:'merge_drafts', status:'complete', progress:78, message:'Drafted sections merged in storyboard order.', timestamp:new Date().toISOString(), severity:'info'});\nreturn [{ json: { ...last, draft_sections: drafts, merged_draft: { story_body, actual_word_count }, telemetry_events: events } }];"
+      },
+      "id": "6418b552-9885-43a3-af4e-c1a4026f446f",
+      "name": "Merge Drafted Sections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7280,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 06 \u2014 Continuity Editor Prompt\n\nYou are the continuity and editorial stage for Ghostwriter n8n. Behave as a narrative editor, not a grammar checker.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original prompt\n- Creative interpretation JSON\n- Story bible JSON\n- Selected act structure\n- Selected narrative framework\n- Story architecture JSON\n- Storyboard JSON\n- Motif tracker\n- Emotional arc tracker\n- Merged drafted prose\n\n## Requirements\n\nCompare the final prose against all of the following:\n\n- original prompt\n- creative interpretation\n- story bible\n- selected act structure\n- selected narrative framework\n- story architecture\n- storyboard\n- motifs\n- emotional arc\n- section continuity obligations\n\nValidate character consistency, world/factual consistency, emotional progression, thematic cohesion, pacing, unresolved motifs, structural integrity, and ending satisfaction. Identify blocking issues, revision instructions, and whether the story can proceed to final polish.\n\n## Output JSON Shape\n\nReturn an object matching \\`continuity-report.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`approval_status\\`\n- \\`overall_assessment\\`\n- \\`checks\\`\n- \\`issues\\`\n- \\`revision_instructions\\`\n- \\`motif_resolution\\`\n- \\`emotional_arc_assessment\\`\n- \\`framework_alignment\\`\n- \\`act_structure_alignment\\`\n- \\`prompt_fidelity\\`\n- \\`warnings\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation, story_bible: item.story_bible, story_architecture: item.story_architecture, storyboard: item.storyboard, draft_sections: item.draft_sections, merged_draft: item.merged_draft };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'continuity_editor' } }];"
+      },
+      "id": "367901eb-d986-44ca-a42d-96a40e16ccc3",
+      "name": "Build Continuity Editor Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7540,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "777b6876-f891-44c3-a094-83ea6df7f65c",
+      "name": "AI Continuity Editor (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7800,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'continuity_editor';\nconst targetKey = 'continuity_report';\nconst required = [\"session_id\", \"approval_status\", \"checks\", \"issues\", \"revision_instructions\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "b141aff0-cb01-43df-8c29-dee8daa417a4",
+      "name": "Parse Continuity Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8060,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "continuity-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4b2fc779-bd3f-4c3c-b968-bbcdc1e8cf85",
+      "name": "Continuity JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        8320,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 07 \u2014 Final Polish Prompt\n\nYou are the final polish stage for Ghostwriter n8n. Produce the final readable story package from the merged draft and editorial report.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Original prompt\n- Creative interpretation JSON\n- Story bible JSON\n- Story architecture JSON\n- Storyboard JSON\n- Merged drafted prose\n- Continuity report JSON\n- Telemetry summary\n\n## Requirements\n\n- Preserve the story's structure, meaning, motifs, emotional arc, and selected framework.\n- Apply continuity fixes and stylistic polish without changing the core plot.\n- Produce a complete final package object.\n- Include \\`cover_image_url\\` as \\`null\\` because image generation is not implemented yet.\n- Include an empty or preliminary \\`cover_brief\\` object if the dedicated cover brief stage has not run yet.\n- Include warnings from validation, capping, or editorial pass.\n- Do not claim WordPress delivery has occurred.\n\n## Output JSON Shape\n\nReturn an object matching \\`final-story-package.schema.json\\` with these keys:\n\n- \\`session_id\\`\n- \\`status\\`\n- \\`title\\`\n- \\`author_name\\`\n- \\`genre\\`\n- \\`synopsis\\`\n- \\`length_profile\\`\n- \\`target_word_count\\`\n- \\`actual_word_count\\`\n- \\`selected_narrative_framework\\`\n- \\`selected_act_structure\\`\n- \\`story_body\\`\n- \\`structure_summary\\`\n- \\`cover_brief\\`\n- \\`cover_image_url\\`\n- \\`telemetry_summary\\`\n- \\`warnings\\`\n- \\`automation_notes\\`\n`;\nconst context = { input: item.input, creative_interpretation: item.creative_interpretation, story_bible: item.story_bible, story_architecture: item.story_architecture, storyboard: item.storyboard, merged_draft: item.merged_draft, continuity_report: item.continuity_report, telemetry_events: item.telemetry_events };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'final_polish' } }];"
+      },
+      "id": "36d16711-1718-44e8-a9a9-b57882ffc25e",
+      "name": "Build Final Polish Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8580,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "884ff399-ffac-48a7-aeba-d669dcea186c",
+      "name": "AI Final Polish (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8840,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'final_polish';\nconst targetKey = 'final_story_package';\nconst required = [\"session_id\", \"status\", \"title\", \"story_body\", \"cover_image_url\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "10210d56-1a6f-4184-bb18-7d4de73244fd",
+      "name": "Parse Final Story Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9100,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "final-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "dd1cc769-47a2-4a27-b486-0a5f2e37bdb4",
+      "name": "Final Package JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        9360,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst promptTemplate = `# 08 \u2014 Cover Brief Prompt\n\nYou are the cover brief stage for Ghostwriter n8n. Create a future image-generation brief only; do not generate an image.\n\nReturn strict JSON only. Do not include Markdown, code fences, comments, prose outside JSON, or trailing commas.\n\n## Inputs\n\n- Final title\n- Genre\n- Tone\n- Synopsis\n- Motifs\n- Audience rating\n- Story body excerpt\n\n## Requirements\n\n- Create a visual brief suitable for a later image generation node.\n- Include visual subject, setting, mood, symbolic motifs, color palette, lighting, composition, typography notes, negative prompt, and aspect ratio.\n- Keep the brief safe for general audience unless the input rating allows otherwise.\n- Set \\`cover_image_url\\` to \\`null\\`.\n- Do not claim an image was generated.\n\n## Output JSON Shape\n\nReturn this strict JSON object:\n\n- \\`prompt\\`\n- \\`negative_prompt\\`\n- \\`palette\\`\n- \\`visual_motifs\\`\n- \\`composition\\`\n- \\`lighting\\`\n- \\`typography_notes\\`\n- \\`aspect_ratio\\`\n- \\`cover_image_url\\`\n`;\nconst context = { title: item.final_story_package.title, genre: item.final_story_package.genre, tone: item.creative_interpretation.tone, synopsis: item.final_story_package.synopsis, motifs: item.story_bible.motifs, story_excerpt: (item.final_story_package.story_body || \"\").slice(0, 1500) };\nreturn [{ json: { ...item, prompt: `${promptTemplate}\n\n## Runtime Context JSON\n${JSON.stringify(context, null, 2)}`, prompt_stage: 'cover_brief' } }];"
+      },
+      "id": "5cb1e1dd-2110-461f-b475-551dc47fcf67",
+      "name": "Build Cover Brief Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9620,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "88f17cd2-b1cb-4abf-ab16-b5c701ede2d5",
+      "name": "AI Cover Brief (Gemini HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9880,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst stage = 'cover_brief';\nconst targetKey = 'cover_brief';\nconst required = [\"prompt\", \"negative_prompt\", \"palette\", \"visual_motifs\", \"composition\", \"lighting\", \"typography_notes\", \"aspect_ratio\"];\nfunction extractText(obj) {\n  return obj?.candidates?.[0]?.content?.parts?.[0]?.text ?? obj?.text ?? obj?.raw_text ?? obj?.output ?? '';\n}\nfunction clean(text) {\n  return String(text || '').trim().replace(/^```(?:json)?\\s*/i, '').replace(/```$/i, '').trim();\n}\nlet parsed = null;\nlet rawText = extractText(item);\ntry {\n  parsed = JSON.parse(clean(rawText));\n  const missing = required.filter(k => parsed[k] === undefined || parsed[k] === null);\n  if (missing.length) throw new Error(`Missing required keys: ${missing.join(', ')}`);\n  return [{ json: { ...item, [targetKey]: parsed, [`${stage}_raw`]: rawText, json_valid: true, workflow_failed: false } }];\n} catch (error) {\n  const events = item.telemetry_events || [];\n  events.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:item.input?.session_id || 'unknown', stage, status:'warning', progress:item.current_progress || 0, message:`${stage} returned invalid JSON.`, timestamp:new Date().toISOString(), severity:'warning', details:{error:error.message}});\n  return [{ json: { ...item, telemetry_events: events, [`${stage}_raw`]: rawText, json_valid: false, workflow_failed: true, error: { stage, error_code:'INVALID_JSON', message:error.message, retryable:true } } }];\n}\n"
+      },
+      "id": "578f4834-a418-4f99-af33-8d8969769f3b",
+      "name": "Parse Cover Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10140,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cover-valid",
+              "leftValue": "={{$json.json_valid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "891f369e-7b58-4dc8-a8db-7a2217363cb5",
+      "name": "Cover Brief JSON Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        10400,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst pkg = item.final_story_package;\nconst cover = item.cover_brief || pkg.cover_brief || {};\npkg.cover_brief = {\n  prompt: cover.prompt || '',\n  negative_prompt: cover.negative_prompt || '',\n  palette: cover.palette || [],\n  visual_motifs: cover.visual_motifs || [],\n  composition: cover.composition || '',\n  lighting: cover.lighting || '',\n  typography_notes: cover.typography_notes || '',\n  aspect_ratio: cover.aspect_ratio || '2:3'\n};\npkg.cover_image_url = null;\npkg.telemetry_summary = { event_count: (item.telemetry_events || []).length, final_progress: 98, warnings_count: (pkg.warnings || []).length };\nreturn [{ json: { ...item, final_story_package: pkg, response: pkg } }];"
+      },
+      "id": "4a48c8cd-c250-4495-99c1-4c62b04d1c62",
+      "name": "Attach Cover Brief and Finalize Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10660,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nevents.push({\n  event_id: `evt_${Date.now()}_${events.length + 1}`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'complete',\n  status: 'complete',\n  progress: 100,\n  message: 'Story generation complete.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n});\nreturn [{ json: { ...item, telemetry_events: events } }];"
+      },
+      "id": "d2da1ba2-345f-4a6b-bf12-4c95dcdc285c",
+      "name": "Emit Complete Telemetry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10920,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "callback-present",
+              "leftValue": "={{!!$json.input.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "5acae4b3-b9f9-4063-99a8-3dc6adcacad9",
+      "name": "Callback URL Present?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11180,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{ json: { ...item, callback_payload: { session_id: item.input.session_id, callback_type:'complete', status:'complete', result: item.final_story_package } } }];"
+      },
+      "id": "f8c13f58-4dd8-4acb-9926-302d9e7e2d5f",
+      "name": "Build Complete Callback Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11440,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Token",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "47888df0-6b9f-4cbb-a2cf-6cf725853077",
+      "name": "Optional Complete Callback (HTTP Request)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11700,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.final_story_package || $json.response}}",
+        "options": {}
+      },
+      "id": "62d40a03-ae26-4543-abe1-5d955790108b",
+      "name": "Respond With Final Package",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        11960,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst input = item.input || {};\nconst error = item.error || {stage:'unknown', error_code:'WORKFLOW_FAILURE', message:'Workflow failed.', retryable:true};\nconst events = item.telemetry_events || [];\nevents.push({event_id:`evt_${Date.now()}_${events.length+1}`, session_id:input.session_id || 'unknown', stage:'failure', status:'failed', progress:item.current_progress || 0, message:error.message, timestamp:new Date().toISOString(), severity:'error', details:error});\nconst callback_payload = { session_id: input.session_id || 'unknown', callback_type:'failure', status:'failed', error };\nreturn [{ json: { ...item, telemetry_events: events, workflow_failed:true, callback_payload, response: callback_payload } }];"
+      },
+      "id": "49d26b3d-e339-408b-86d3-fdb4b9cbbf06",
+      "name": "Stage Failure Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3640,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "failure-callback-present",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4268221f-1fa0-4b06-bae4-1e25c75a35ee",
+      "name": "Failure Callback URL Present?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3900,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Token",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "b9d150b7-6b7c-4d28-bb39-5686afab1e0c",
+      "name": "Optional Failure Callback (HTTP Request)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4160,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.callback_payload || $json.response}}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "31f7012d-02e0-4818-9d11-c63d0a1d4f1d",
+      "name": "Respond With Failure",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        4420,
+        440
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Emit Accepted Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Accepted Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Input Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Creative Interpretation Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Failure Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Failure Response": {
+      "main": [
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Creative Interpretation Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Creative Interpretation (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Creative Interpretation (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Creative Interpretation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Creative Interpretation": {
+      "main": [
+        [
+          {
+            "node": "Creative JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creative JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Enforce Length Profile and Public Cap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Creative JSON Repair Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Creative JSON Repair Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Repair Creative JSON (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Repair Creative JSON (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Repaired Creative Interpretation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Repaired Creative Interpretation": {
+      "main": [
+        [
+          {
+            "node": "Repaired Creative JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Repaired Creative JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Enforce Length Profile and Public Cap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce Length Profile and Public Cap": {
+      "main": [
+        [
+          {
+            "node": "Emit Interpretation Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Interpretation Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Build Story Bible Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Story Bible Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Story Bible (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Story Bible (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Story Bible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Story Bible": {
+      "main": [
+        [
+          {
+            "node": "Story Bible JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Story Bible JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Emit Story Bible Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Story Bible Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Build Story Architecture Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Story Architecture Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Story Architecture (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Story Architecture (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Story Architecture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Story Architecture": {
+      "main": [
+        [
+          {
+            "node": "Architecture JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Architecture JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Emit Architecture Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Architecture Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Build Storyboard Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Storyboard Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Storyboard (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storyboard (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Storyboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Storyboard": {
+      "main": [
+        [
+          {
+            "node": "Storyboard JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Storyboard JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Emit Storyboard Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Storyboard Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Split Storyboard Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Storyboard Sections": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Storyboard Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Storyboard Sections": {
+      "main": [
+        [
+          {
+            "node": "Emit Drafting Telemetry Per Section",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Drafted Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Drafting Telemetry Per Section": {
+      "main": [
+        [
+          {
+            "node": "Build Section Draft Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Section Draft Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Draft Section (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Draft Section (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Section Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Section Draft": {
+      "main": [
+        [
+          {
+            "node": "Section Draft JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Section Draft JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Collect Draft Section",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Draft Section": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Storyboard Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Drafted Sections": {
+      "main": [
+        [
+          {
+            "node": "Build Continuity Editor Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Continuity Editor Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Continuity Editor (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Continuity Editor (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Continuity Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Continuity Report": {
+      "main": [
+        [
+          {
+            "node": "Continuity JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continuity JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Final Polish Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Polish Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Final Polish (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Final Polish (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Final Story Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Final Story Package": {
+      "main": [
+        [
+          {
+            "node": "Final Package JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Package JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Cover Brief Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Cover Brief Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Cover Brief (Gemini HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Cover Brief (Gemini HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Cover Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Cover Brief": {
+      "main": [
+        [
+          {
+            "node": "Cover Brief JSON Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cover Brief JSON Valid?": {
+      "main": [
+        [
+          {
+            "node": "Attach Cover Brief and Finalize Package",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage Failure Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Cover Brief and Finalize Package": {
+      "main": [
+        [
+          {
+            "node": "Emit Complete Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit Complete Telemetry": {
+      "main": [
+        [
+          {
+            "node": "Callback URL Present?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback URL Present?": {
+      "main": [
+        [
+          {
+            "node": "Build Complete Callback Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond With Final Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Complete Callback Payload": {
+      "main": [
+        [
+          {
+            "node": "Optional Complete Callback (HTTP Request)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Complete Callback (HTTP Request)": {
+      "main": [
+        [
+          {
+            "node": "Respond With Final Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage Failure Handler": {
+      "main": [
+        [
+          {
+            "node": "Failure Callback URL Present?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failure Callback URL Present?": {
+      "main": [
+        [
+          {
+            "node": "Optional Failure Callback (HTTP Request)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond With Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Failure Callback (HTTP Request)": {
+      "main": [
+        [
+          {
+            "node": "Respond With Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "ghostwriter-story-generator-v2-spec",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Importable single-workflow Ghostwriter n8n v2.0 specification. Uses Gemini HTTP placeholders and callback-ready optional HTTP nodes."
+  },
+  "tags": [
+    {
+      "name": "ghostwriter"
+    },
+    {
+      "name": "v2.0"
+    },
+    {
+      "name": "specification"
+    }
+  ]
+}

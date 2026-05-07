@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WordPress Callback Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "callback_type",
+    "status"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "callback_type": {
+      "type": "string",
+      "enum": [
+        "progress",
+        "failure",
+        "complete"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "running",
+        "failed",
+        "complete"
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "session_id",
+        "stage",
+        "status",
+        "progress",
+        "message",
+        "timestamp"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "validate_input",
+            "creative_interpretation",
+            "story_bible",
+            "story_architecture",
+            "storyboard",
+            "drafting",
+            "merge_drafts",
+            "continuity_editor",
+            "final_polish",
+            "cover_brief",
+            "package",
+            "callback_ready",
+            "complete",
+            "failure"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "complete",
+            "warning",
+            "failed"
+          ]
+        },
+        "progress": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage",
+        "error_code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "callback_type": {
+            "const": "progress"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "event"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "callback_type": {
+            "const": "failure"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "callback_type": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "result"
+        ]
+      }
+    }
+  ]
+}

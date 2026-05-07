@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Creative Interpretation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "interpreted_genre",
+    "fictionality_mode",
+    "tone",
+    "themes",
+    "motifs",
+    "audience_rating",
+    "recommended_length_profile",
+    "target_word_count",
+    "public_cap_applied",
+    "selected_narrative_framework",
+    "selected_act_structure",
+    "emotional_direction",
+    "premise_complexity",
+    "suggested_section_count_range",
+    "creative_rationale",
+    "constraints_to_preserve",
+    "warnings"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "interpreted_genre": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fictionality_mode": {
+      "type": "string",
+      "enum": [
+        "fiction",
+        "narrative_nonfiction",
+        "parable",
+        "essayistic",
+        "memoir_like",
+        "explanatory"
+      ]
+    },
+    "tone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "motifs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "audience_rating": {
+      "type": "string",
+      "enum": [
+        "general",
+        "teen",
+        "mature"
+      ]
+    },
+    "recommended_length_profile": {
+      "type": "string",
+      "enum": [
+        "micro_fiction",
+        "flash_fiction",
+        "short_story",
+        "long_short_story",
+        "novelette",
+        "novella"
+      ]
+    },
+    "target_word_count": {
+      "type": "integer",
+      "minimum": 250,
+      "maximum": 40000
+    },
+    "public_cap_applied": {
+      "type": "boolean"
+    },
+    "selected_narrative_framework": {
+      "type": "string",
+      "enum": [
+        "emotional_character_arc",
+        "mystery_discovery_arc",
+        "adventure_escalation_arc",
+        "tragic_spiral",
+        "circular_fairytale_structure"
+      ]
+    },
+    "selected_act_structure": {
+      "type": "string",
+      "enum": [
+        "three_act_structure",
+        "four_act_escalation_structure",
+        "hero_transformation_structure",
+        "mystery_revelation_structure"
+      ]
+    },
+    "emotional_direction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "premise_complexity": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "moderate",
+        "complex",
+        "long_form"
+      ]
+    },
+    "suggested_section_count_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "creative_rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "constraints_to_preserve": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

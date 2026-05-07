@@ -1,0 +1,56 @@
+[
+  {
+    "event_id": "evt_001",
+    "session_id": "gw_20260507_001",
+    "stage": "accepted",
+    "status": "complete",
+    "progress": 2,
+    "message": "Request accepted and normalized.",
+    "timestamp": "2026-05-07T12:00:00Z",
+    "severity": "info"
+  },
+  {
+    "event_id": "evt_002",
+    "session_id": "gw_20260507_001",
+    "stage": "creative_interpretation",
+    "status": "complete",
+    "progress": 12,
+    "message": "Premise interpreted and creative strategy selected.",
+    "timestamp": "2026-05-07T12:00:08Z",
+    "severity": "info"
+  },
+  {
+    "event_id": "evt_003",
+    "session_id": "gw_20260507_001",
+    "stage": "storyboard",
+    "status": "complete",
+    "progress": 45,
+    "message": "Executable storyboard plan created.",
+    "timestamp": "2026-05-07T12:00:30Z",
+    "severity": "info"
+  },
+  {
+    "event_id": "evt_004",
+    "session_id": "gw_20260507_001",
+    "stage": "drafting",
+    "status": "running",
+    "progress": 63,
+    "message": "Drafting section 2 of 4.",
+    "timestamp": "2026-05-07T12:01:00Z",
+    "severity": "info",
+    "details": {
+      "section_index": 2,
+      "total_sections": 4
+    }
+  },
+  {
+    "event_id": "evt_005",
+    "session_id": "gw_20260507_001",
+    "stage": "complete",
+    "status": "complete",
+    "progress": 100,
+    "message": "Story generation complete.",
+    "timestamp": "2026-05-07T12:02:30Z",
+    "severity": "info"
+  }
+]

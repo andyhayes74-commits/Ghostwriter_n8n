@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Continuity Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "approval_status",
+    "overall_assessment",
+    "checks",
+    "issues",
+    "revision_instructions",
+    "motif_resolution",
+    "emotional_arc_assessment",
+    "framework_alignment",
+    "act_structure_alignment",
+    "prompt_fidelity",
+    "warnings"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "approved_with_warnings",
+        "revision_required",
+        "blocked"
+      ]
+    },
+    "overall_assessment": {
+      "type": "string"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "status",
+          "notes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "warning",
+              "fail"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "location",
+          "description",
+          "recommended_fix"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "blocking"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommended_fix": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "revision_instructions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "motif_resolution": {
+      "type": "string"
+    },
+    "emotional_arc_assessment": {
+      "type": "string"
+    },
+    "framework_alignment": {
+      "type": "string"
+    },
+    "act_structure_alignment": {
+      "type": "string"
+    },
+    "prompt_fidelity": {
+      "type": "string"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "session_id": "gw_20260507_001",
+  "status": "complete",
+  "title": "The Listening Pond",
+  "author_name": "Andy Hayes",
+  "genre": "Whimsical Fantasy",
+  "synopsis": "A lonely frog who overwhelms the pond with his songs learns that love begins with listening.",
+  "length_profile": "short_story",
+  "target_word_count": 2200,
+  "actual_word_count": 2184,
+  "selected_narrative_framework": "circular_fairytale_structure",
+  "selected_act_structure": "four_act_escalation_structure",
+  "story_body": "Example placeholder story body. In a live n8n run this field contains the polished prose assembled from dynamically drafted storyboard sections.",
+  "structure_summary": {
+    "total_sections": 4,
+    "acts": [
+      "Establish Jim's loneliness and loud songs.",
+      "Introduce the quiet moth and the night pond.",
+      "Force Jim to confront the harm caused by performing over others.",
+      "Return Jim transformed, listening before singing."
+    ],
+    "motifs": [
+      "lantern light",
+      "ripples",
+      "distant music"
+    ]
+  },
+  "cover_brief": {
+    "prompt": "A gentle storybook cover showing a green frog on a moonlit lily pad listening to a small glowing moth above a quiet pond, whimsical fantasy, warm lantern light, tender mood.",
+    "negative_prompt": "No horror, no photorealistic gore, no aggressive expression, no cluttered typography.",
+    "palette": [
+      "moss green",
+      "moonlit blue",
+      "lantern gold"
+    ],
+    "visual_motifs": [
+      "lily pad",
+      "moth glow",
+      "concentric ripples"
+    ],
+    "composition": "Centered frog in the lower third, moth light above, soft pond reeds framing the scene.",
+    "lighting": "Moonlit blue ambience with a small warm glow from the moth.",
+    "typography_notes": "Leave clean negative space at top for title text; rounded storybook lettering suggested.",
+    "aspect_ratio": "2:3"
+  },
+  "cover_image_url": null,
+  "telemetry_summary": {
+    "event_count": 13,
+    "final_progress": 100,
+    "warnings_count": 0
+  },
+  "warnings": [],
+  "automation_notes": [
+    "Generated from v2.0 transfer-ready specification.",
+    "Cover image generation is not implemented; cover_image_url remains null.",
+    "WordPress callback payload is contract-ready but no endpoint is assumed."
+  ]
+}
