@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Final Story Package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "status",
+    "title",
+    "author_name",
+    "genre",
+    "synopsis",
+    "length_profile",
+    "target_word_count",
+    "actual_word_count",
+    "selected_narrative_framework",
+    "selected_act_structure",
+    "story_body",
+    "structure_summary",
+    "cover_brief",
+    "cover_image_url",
+    "telemetry_summary",
+    "warnings",
+    "automation_notes"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "complete_with_warnings"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "synopsis": {
+      "type": "string"
+    },
+    "length_profile": {
+      "type": "string",
+      "enum": [
+        "micro_fiction",
+        "flash_fiction",
+        "short_story",
+        "long_short_story",
+        "novelette",
+        "novella"
+      ]
+    },
+    "target_word_count": {
+      "type": "integer",
+      "minimum": 250
+    },
+    "actual_word_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "selected_narrative_framework": {
+      "type": "string",
+      "enum": [
+        "emotional_character_arc",
+        "mystery_discovery_arc",
+        "adventure_escalation_arc",
+        "tragic_spiral",
+        "circular_fairytale_structure"
+      ]
+    },
+    "selected_act_structure": {
+      "type": "string",
+      "enum": [
+        "three_act_structure",
+        "four_act_escalation_structure",
+        "hero_transformation_structure",
+        "mystery_revelation_structure"
+      ]
+    },
+    "story_body": {
+      "type": "string",
+      "minLength": 1
+    },
+    "structure_summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "cover_brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prompt",
+        "negative_prompt",
+        "palette",
+        "visual_motifs",
+        "composition",
+        "lighting",
+        "typography_notes",
+        "aspect_ratio"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "negative_prompt": {
+          "type": "string"
+        },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "visual_motifs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "composition": {
+          "type": "string"
+        },
+        "lighting": {
+          "type": "string"
+        },
+        "typography_notes": {
+          "type": "string"
+        },
+        "aspect_ratio": {
+          "type": "string"
+        },
+        "cover_image_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        }
+      }
+    },
+    "cover_image_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "telemetry_summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "automation_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

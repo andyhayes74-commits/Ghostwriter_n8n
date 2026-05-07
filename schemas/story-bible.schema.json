@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Story Bible",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "title_working",
+    "logline",
+    "genre",
+    "tone",
+    "point_of_view",
+    "tense",
+    "voice_rules",
+    "characters",
+    "setting",
+    "themes",
+    "motifs",
+    "emotional_arc",
+    "conflict_model",
+    "continuity_anchors",
+    "style_constraints",
+    "nonfiction_boundaries"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title_working": {
+      "type": "string"
+    },
+    "logline": {
+      "type": "string"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "tone": {
+      "type": "string"
+    },
+    "point_of_view": {
+      "type": "string"
+    },
+    "tense": {
+      "type": "string"
+    },
+    "voice_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "role",
+          "motivation",
+          "conflict",
+          "arc",
+          "continuity_notes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "motivation": {
+            "type": "string"
+          },
+          "conflict": {
+            "type": "string"
+          },
+          "arc": {
+            "type": "string"
+          },
+          "continuity_notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_locations",
+        "time_period",
+        "world_rules"
+      ],
+      "properties": {
+        "primary_locations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "time_period": {
+          "type": "string"
+        },
+        "world_rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "motifs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "motif",
+          "meaning",
+          "planned_evolution"
+        ],
+        "properties": {
+          "motif": {
+            "type": "string"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "planned_evolution": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "emotional_arc": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conflict_model": {
+      "type": "string"
+    },
+    "continuity_anchors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "style_constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nonfiction_boundaries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
