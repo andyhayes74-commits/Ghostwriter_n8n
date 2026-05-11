@@ -394,7 +394,7 @@ Use these top-level keys as the workflow progresses:
 
 After each major telemetry Code node (`accepted`, `creative_interpretation`, `story_bible`, `story_architecture`, `storyboard`, and per-section `drafting`):
 
-1. Use a Code node only to build `progress_callback_payload`. The payload must include top-level `stage`, `progress`, and `message` copied from the latest telemetry event, plus the nested `event` object and `details.event`.
+1. Use a Code node only to build `progress_callback_payload`. The payload must include top-level `stage`, `progress`, and `message` copied from the latest telemetry event, plus `build_state`, `changed_fields`, the nested `event` object, and matching `details.build_state`, `details.changed_fields`, and `details.event`. The Living Storyboard `build_state` is partial and accumulative by stage and must use only data already present in the workflow item.
 2. Use an IF node to check `input.callback_url` exists and starts with `https://`.
 3. On the true path, call the callback URL with an HTTP Request node using `POST`, `Content-Type: application/json`, and `X-Ghostwriter-Secret: {{$env.GHOSTWRITER_CALLBACK_SECRET}}`. Configure the HTTP Request node with `ignoreResponseCode` and continue-on-fail behavior.
 4. Wire both the true and false paths back to the normal story-generation path so missing, non-HTTPS, or failing progress callbacks do not stop the workflow.

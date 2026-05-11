@@ -149,6 +149,16 @@
     "details": {
       "type": "object",
       "additionalProperties": true
+    },
+    "build_state": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "changed_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "allOf": [

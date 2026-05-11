@@ -96,7 +96,7 @@ The creative interpretation stage includes a repair branch because it selects th
 Callbacks are optional.
 
 - If `callback_url` is missing, the workflow skips callbacks and returns the final package.
-- If `callback_url` starts with `https://`, progress callback payload Code nodes build a payload and dedicated HTTP Request nodes post it with `callback_type: "progress"`, `status: "running"`, top-level `stage`, `progress`, and `message`, plus the nested telemetry `event`. Progress callback HTTP Request nodes ignore delivery failures so they do not fail the workflow.
+- If `callback_url` starts with `https://`, progress callback payload Code nodes build a payload and dedicated HTTP Request nodes post it with `callback_type: "progress"`, `status: "running"`, top-level `stage`, `progress`, and `message`, plus Living Storyboard `build_state` / `changed_fields` at both the top level and under `details`, plus the nested telemetry `event`. The `build_state` is partial and accumulative by stage. Progress callback HTTP Request nodes ignore delivery failures so they do not fail the workflow.
 - Complete callbacks keep `{ session_id, callback_type: "complete", status: "complete", result: final_story_package }`.
 - Failure callbacks keep `{ session_id, callback_type: "failure", status: "failed", error }`.
 - Terminal callback HTTP Request nodes send `X-Ghostwriter-Secret: {{$env.GHOSTWRITER_CALLBACK_SECRET}}` and ignore non-2xx response codes so story generation is not converted into a failed generation solely because the callback endpoint returned an error.

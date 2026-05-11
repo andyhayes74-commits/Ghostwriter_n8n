@@ -70,7 +70,7 @@ All callback payloads validate against `schemas/wordpress-callback.schema.json`.
 
 ### Progress Callback
 
-Progress callbacks are optional and are sent by HTTP Request nodes after major telemetry events when `callback_url` starts with `https://`. Code nodes build the payload only; they do not make internal HTTP requests. A progress callback failure must not fail the workflow.
+Progress callbacks are optional and are sent by HTTP Request nodes after major telemetry events when `callback_url` starts with `https://`. Code nodes build the payload only; they do not make internal HTTP requests. A progress callback failure must not fail the workflow. Progress callbacks include Living Storyboard state in `build_state`, `changed_fields`, `details.build_state`, and `details.changed_fields`; this state is partial and accumulative by stage, and the workflow must not fabricate story data that is not available yet.
 
 ```json
 {
@@ -80,6 +80,19 @@ Progress callbacks are optional and are sent by HTTP Request nodes after major t
   "stage": "storyboard",
   "progress": 45,
   "message": "Executable storyboard plan created.",
+  "build_state": {
+    "synopsis": [],
+    "structure": {},
+    "generation_details": {
+      "stage": "storyboard",
+      "progress": 45
+    }
+  },
+  "changed_fields": [
+    "synopsis",
+    "structure",
+    "generation_details"
+  ],
   "event": {
     "event_id": "evt_001",
     "session_id": "gw_20260507_001",
@@ -92,6 +105,19 @@ Progress callbacks are optional and are sent by HTTP Request nodes after major t
     "details": {}
   },
   "details": {
+    "build_state": {
+      "synopsis": [],
+      "structure": {},
+      "generation_details": {
+        "stage": "storyboard",
+        "progress": 45
+      }
+    },
+    "changed_fields": [
+      "synopsis",
+      "structure",
+      "generation_details"
+    ],
     "event": {
       "event_id": "evt_001",
       "session_id": "gw_20260507_001",
