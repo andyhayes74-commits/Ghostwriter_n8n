@@ -25,7 +25,7 @@ WordPress dispatches a JSON object to the n8n webhook path `ghostwriter/v2/story
 | `mode` | string | Defaults to `public`; valid values are `public` and `internal`. |
 | `requested_length_profile` | string or null | Treated as a hint. |
 | `genre` | string or null | Preserved in `input.genre`; defaults to `null` when absent. |
-| `contract` | string or null | Preserved in `input.contract`; defaults to `null` when absent. |
+| `contract` | object or null | Preserved in `input.contract`; defaults to `null` when absent. |
 | `callback_url` | string or null | Callbacks are sent only when it starts with `https://`. |
 | `metadata` | object | Opaque pass-through metadata. |
 | `constraints` | object | User/site constraints; defaults to general-audience constraints when absent. |
@@ -40,9 +40,9 @@ Every callback from n8n to WordPress uses the shared secret header:
 X-Ghostwriter-Secret: <GHOSTWRITER_CALLBACK_SECRET>
 ```
 
-n8n reads the value from the environment variable `GHOSTWRITER_CALLBACK_SECRET`.
+n8n reads the value from the environment variable `GHOSTWRITER_CALLBACK_SECRET`. When the WordPress plugin has a shared secret configured, this environment variable is required for WordPress to accept callbacks and save completed n8n stories.
 
-`X-Ghostwriter-Token` and `GHOSTWRITER_CALLBACK_TOKEN` are legacy names only if the deployed plugin explicitly accepts them. They are not part of the v2.3 live bridge contract.
+The v2.3 live bridge contract uses only `X-Ghostwriter-Secret` for callback authentication.
 
 ## Callback URL Rules
 
@@ -52,13 +52,18 @@ n8n reads the value from the environment variable `GHOSTWRITER_CALLBACK_SECRET`.
 
 ## Progress Callback
 
-Progress callbacks are sent after major telemetry nodes. Delivery failures are caught and must not fail the workflow.
+Progress callbacks are sent after major telemetry nodes. The workflow uses dedicated n8n HTTP Request nodes for delivery; Code nodes only build the payload. Delivery failures are configured not to fail the story-generation workflow.
+
+Progress callbacks duplicate plugin-friendly values at the top level while keeping the full telemetry event nested under `event`.
 
 ```json
 {
   "session_id": "gw_20260507_001",
   "callback_type": "progress",
   "status": "running",
+  "stage": "storyboard",
+  "progress": 45,
+  "message": "Executable storyboard plan created.",
   "event": {
     "event_id": "evt_001",
     "session_id": "gw_20260507_001",
@@ -67,7 +72,21 @@ Progress callbacks are sent after major telemetry nodes. Delivery failures are c
     "progress": 45,
     "message": "Executable storyboard plan created.",
     "timestamp": "2026-05-07T12:00:00Z",
-    "severity": "info"
+    "severity": "info",
+    "details": {}
+  },
+  "details": {
+    "event": {
+      "event_id": "evt_001",
+      "session_id": "gw_20260507_001",
+      "stage": "storyboard",
+      "status": "complete",
+      "progress": 45,
+      "message": "Executable storyboard plan created.",
+      "timestamp": "2026-05-07T12:00:00Z",
+      "severity": "info",
+      "details": {}
+    }
   }
 }
 ```
@@ -117,3 +136,4 @@ WordPress stores or displays the failure from `error`.
 - Preserve `genre` and `contract` in normalized input.
 - Keep completion and failure callback shapes exactly as defined above.
 - Use `X-Ghostwriter-Secret` for callback authentication.
+- Use HTTP Request nodes for progress callback delivery; do not make HTTP requests from Code nodes.

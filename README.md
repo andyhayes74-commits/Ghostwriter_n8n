@@ -203,7 +203,7 @@ The final package includes:
 
 The workflow is synced to the current Ghostwriter Automation WordPress plugin bridge contract. The workflow accepts plugin fields such as `genre` and `contract`, sends callbacks only when `callback_url` starts with `https://`, and authenticates callbacks with the shared secret header `X-Ghostwriter-Secret` sourced from `GHOSTWRITER_CALLBACK_SECRET`.
 
-Progress callbacks use `{ session_id, callback_type: "progress", status: "running", event }`, where `event` is the latest telemetry event. Terminal callbacks keep the plugin-saveable shapes `{ session_id, callback_type: "complete", status: "complete", result: final_story_package }` and `{ session_id, callback_type: "failure", status: "failed", error }`.
+Progress callbacks use HTTP Request nodes and include top-level `stage`, `progress`, and `message` alongside the nested latest telemetry `event`. Terminal callbacks keep the plugin-saveable shapes `{ session_id, callback_type: "complete", status: "complete", result: final_story_package }` and `{ session_id, callback_type: "failure", status: "failed", error }`.
 
 See `docs/wordpress-integration-contract.md`, `docs/contracts/ghostwriter-plugin-n8n-v2.3.md`, and `schemas/wordpress-callback.schema.json` before deploying WordPress delivery.
 
@@ -248,9 +248,9 @@ This repository now includes a single importable n8n workflow JSON file:
 workflows/ghostwriter-story-generator-v2.import.json
 ```
 
-Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, optional progress callback Code nodes, callback-ready terminal HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
+Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, progress callback payload Code nodes, progress callback HTTP Request nodes, callback-ready terminal HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
 
-After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and optionally `GHOSTWRITER_CALLBACK_SECRET` in n8n. Do not hardcode real API keys in the workflow JSON.
+After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and `GHOSTWRITER_CALLBACK_SECRET` when the WordPress plugin shared secret is configured. Do not hardcode real API keys in the workflow JSON.
 
 ## Transfer Path
 

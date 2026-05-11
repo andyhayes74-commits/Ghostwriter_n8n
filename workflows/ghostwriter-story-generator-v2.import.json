@@ -1244,10 +1244,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "11d18837-7ad6-4448-aa6f-7389fb9d62e6",
-      "name": "Optional Progress Callback - Accepted",
+      "name": "Build Progress Callback Payload - Accepted",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1257,10 +1257,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "235b6d97-2dce-4832-bc56-92f9e5cbae8a",
-      "name": "Optional Progress Callback - Interpretation",
+      "name": "Build Progress Callback Payload - Interpretation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1270,10 +1270,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "8830eba1-acf0-42c3-895c-d5e492eeec97",
-      "name": "Optional Progress Callback - Story Bible",
+      "name": "Build Progress Callback Payload - Story Bible",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1283,10 +1283,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "16275324-ed62-479a-a6d0-b3456c3d37c5",
-      "name": "Optional Progress Callback - Architecture",
+      "name": "Build Progress Callback Payload - Architecture",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1296,10 +1296,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "4233cfd0-c48e-4259-a232-ff61412cd241",
-      "name": "Optional Progress Callback - Storyboard",
+      "name": "Build Progress Callback Payload - Storyboard",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1309,16 +1309,418 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+        "jsCode": "const item = $input.first().json;\nconst events = item.telemetry_events || [];\nconst latestEvent = events[events.length - 1] || {\n  event_id: `evt_${Date.now()}_progress`,\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  stage: 'accepted',\n  status: 'running',\n  progress: 0,\n  message: 'Workflow progress updated.',\n  timestamp: new Date().toISOString(),\n  severity: 'info'\n};\nconst event = { ...latestEvent, details: latestEvent.details || {} };\nconst details = { event };\nif (item.build_state !== undefined) details.build_state = item.build_state;\nif (item.changed_fields !== undefined) details.changed_fields = item.changed_fields;\nconst progress_callback_payload = {\n  session_id: item.input?.session_id || item.session_id || 'unknown',\n  callback_type: 'progress',\n  status: 'running',\n  stage: event.stage,\n  progress: Number.isFinite(event.progress) ? event.progress : 0,\n  message: event.message || 'Workflow progress updated.',\n  event,\n  details\n};\nreturn [{ json: { ...item, progress_callback_payload } }];"
       },
       "id": "8a8a67e6-a83c-4bb5-a0db-86f732ccedd2",
-      "name": "Optional Progress Callback - Drafting",
+      "name": "Build Progress Callback Payload - Drafting",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         7410,
         40
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-accepted",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "c1b05396-2b61-4124-b097-86c5b34799ff",
+      "name": "Progress Callback URL Present? - Accepted",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        870,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "6ab9893c-ede8-40e4-8419-e15fa1782c1c",
+      "name": "Optional Progress Callback HTTP - Accepted",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1110,
+        100
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-interpretation",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "f280c917-73a6-4ba0-a102-abe5ff0e3e27",
+      "name": "Progress Callback URL Present? - Interpretation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2950,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "b4208b1c-4943-4df1-8f4a-2ea24d69b68e",
+      "name": "Optional Progress Callback HTTP - Interpretation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3190,
+        40
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-story-bible",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "055987ab-f104-4605-bfbb-4f01ab78f683",
+      "name": "Progress Callback URL Present? - Story Bible",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4250,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "c43194ed-01b1-49c5-8761-3ade07eaeaf6",
+      "name": "Optional Progress Callback HTTP - Story Bible",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4490,
+        40
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-architecture",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4cbf8941-71db-405f-b4d4-e3223cf0298a",
+      "name": "Progress Callback URL Present? - Architecture",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5550,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "dabf69c2-db18-420a-9443-4e564fea71d0",
+      "name": "Optional Progress Callback HTTP - Architecture",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5790,
+        40
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-storyboard",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "7a40eca5-3d65-455f-b2a8-6ee1b6f1c452",
+      "name": "Progress Callback URL Present? - Storyboard",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6850,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "f5f82698-f468-430d-aa51-049f97df9f6c",
+      "name": "Optional Progress Callback HTTP - Storyboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7090,
+        40
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "progress-callback-present-drafting",
+              "leftValue": "={{!!$json.input?.callback_url && $json.input.callback_url.startsWith('https://')}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "6e26eb1a-8c8d-41f1-af43-f740d7810c4d",
+      "name": "Progress Callback URL Present? - Drafting",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7630,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.input.callback_url}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.progress_callback_payload) }}",
+        "options": {
+          "timeout": 30000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "951f1efe-8741-40c5-a53b-11713610b8e3",
+      "name": "Optional Progress Callback HTTP - Drafting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7870,
+        -80
+      ],
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -1360,7 +1762,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Accepted",
+            "node": "Build Progress Callback Payload - Accepted",
             "type": "main",
             "index": 0
           }
@@ -1524,7 +1926,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Interpretation",
+            "node": "Build Progress Callback Payload - Interpretation",
             "type": "main",
             "index": 0
           }
@@ -1586,7 +1988,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Story Bible",
+            "node": "Build Progress Callback Payload - Story Bible",
             "type": "main",
             "index": 0
           }
@@ -1648,7 +2050,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Architecture",
+            "node": "Build Progress Callback Payload - Architecture",
             "type": "main",
             "index": 0
           }
@@ -1710,7 +2112,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Storyboard",
+            "node": "Build Progress Callback Payload - Storyboard",
             "type": "main",
             "index": 0
           }
@@ -1750,7 +2152,7 @@
       "main": [
         [
           {
-            "node": "Optional Progress Callback - Drafting",
+            "node": "Build Progress Callback Payload - Drafting",
             "type": "main",
             "index": 0
           }
@@ -2085,8 +2487,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Accepted": {
+    "Build Progress Callback Payload - Accepted": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Accepted": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Accepted",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Validate Input",
@@ -2096,8 +2521,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Interpretation": {
+    "Build Progress Callback Payload - Interpretation": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Interpretation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Interpretation": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Interpretation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Story Bible Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Build Story Bible Prompt",
@@ -2107,8 +2555,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Story Bible": {
+    "Build Progress Callback Payload - Story Bible": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Story Bible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Story Bible": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Story Bible",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Story Architecture Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Build Story Architecture Prompt",
@@ -2118,8 +2589,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Architecture": {
+    "Build Progress Callback Payload - Architecture": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Architecture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Architecture": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Architecture",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Storyboard Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Build Storyboard Prompt",
@@ -2129,8 +2623,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Storyboard": {
+    "Build Progress Callback Payload - Storyboard": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Storyboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Storyboard": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Storyboard",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Storyboard Sections",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Split Storyboard Sections",
@@ -2140,8 +2657,31 @@
         ]
       ]
     },
-    "Optional Progress Callback - Drafting": {
+    "Build Progress Callback Payload - Drafting": {
       "main": [
+        [
+          {
+            "node": "Progress Callback URL Present? - Drafting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress Callback URL Present? - Drafting": {
+      "main": [
+        [
+          {
+            "node": "Optional Progress Callback HTTP - Drafting",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Section Draft Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Build Section Draft Prompt",

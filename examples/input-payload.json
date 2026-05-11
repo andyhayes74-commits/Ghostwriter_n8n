@@ -5,7 +5,10 @@
   "mode": "public",
   "requested_length_profile": "short_story",
   "genre": "Speculative Fiction",
-  "contract": "ghostwriter-plugin-n8n-v2.3",
+  "contract": {
+    "name": "ghostwriter-plugin-n8n",
+    "version": "2.3"
+  },
   "callback_url": null,
   "metadata": {
     "source": "manual_test",

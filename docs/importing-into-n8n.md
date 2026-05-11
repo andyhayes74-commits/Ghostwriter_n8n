@@ -24,9 +24,9 @@ The imported workflow includes:
 - Failure handling and optional failure callback nodes.
 - Dynamic storyboard splitting and Loop Over Items / Split in Batches drafting.
 - Draft collection and merge logic.
-- Continuity editor, final polish, cover brief stub, final packaging, telemetry, optional progress callback Code nodes, and optional complete callback nodes.
+- Continuity editor, final polish, cover brief stub, final packaging, telemetry, progress callback payload Code nodes, progress callback HTTP Request nodes, and optional complete callback nodes.
 - Callback-ready terminal HTTP Request nodes that are skipped unless `callback_url` is present and starts with `https://`.
-- Progress callback Code nodes after major telemetry nodes; these catch callback errors and return the original item so callback delivery cannot fail story generation.
+- Progress callback payload Code nodes after major telemetry nodes, followed by HTTPS guards and HTTP Request nodes configured so callback delivery cannot fail story generation.
 
 ## Required Environment Variables
 
@@ -36,7 +36,7 @@ Configure these in the n8n environment before executing AI or callback nodes:
 |---|---|---|
 | `GEMINI_API_KEY` | Yes for AI calls | Placeholder Gemini API key used by HTTP Request nodes. |
 | `GEMINI_MODEL` | Yes for AI calls | Gemini model path segment, for example `gemini-1.5-pro` or the model selected for your environment. |
-| `GHOSTWRITER_CALLBACK_SECRET` | Optional | Shared secret sent as `X-Ghostwriter-Secret` for WordPress callback authentication. |
+| `GHOSTWRITER_CALLBACK_SECRET` | Required when the plugin shared secret is configured | Shared secret sent as `X-Ghostwriter-Secret` so WordPress can accept callbacks and save completed n8n stories. |
 
 Do not hardcode real API keys in the workflow JSON. The import file uses placeholder expressions such as `{{$env.GEMINI_API_KEY}}`.
 
@@ -96,7 +96,7 @@ The creative interpretation stage includes a repair branch because it selects th
 Callbacks are optional.
 
 - If `callback_url` is missing, the workflow skips callbacks and returns the final package.
-- If `callback_url` starts with `https://`, progress callback Code nodes post the latest telemetry event with `callback_type: "progress"` and `status: "running"`. Progress callback errors are caught and stored as `progress_callback_warning` without failing the workflow.
+- If `callback_url` starts with `https://`, progress callback payload Code nodes build a payload and dedicated HTTP Request nodes post it with `callback_type: "progress"`, `status: "running"`, top-level `stage`, `progress`, and `message`, plus the nested telemetry `event`. Progress callback HTTP Request nodes ignore delivery failures so they do not fail the workflow.
 - Complete callbacks keep `{ session_id, callback_type: "complete", status: "complete", result: final_story_package }`.
 - Failure callbacks keep `{ session_id, callback_type: "failure", status: "failed", error }`.
 - Terminal callback HTTP Request nodes send `X-Ghostwriter-Secret: {{$env.GHOSTWRITER_CALLBACK_SECRET}}` and ignore non-2xx response codes so story generation is not converted into a failed generation solely because the callback endpoint returned an error.
@@ -123,5 +123,6 @@ Add a real image-generation node only after v2.3 text generation, validation, ca
 - Confirm the cover stage is a brief-only stub.
 - Confirm optional callbacks are skipped when `callback_url` is absent.
 - Confirm callback authentication uses `X-Ghostwriter-Secret` and `GHOSTWRITER_CALLBACK_SECRET`.
-- Confirm progress callback nodes return the original item after success or failure.
+- Confirm progress callback delivery uses HTTP Request nodes, not Code-node internal HTTP calls.
+- Confirm progress callback HTTPS guards continue the story path when `callback_url` is absent or non-HTTPS.
 - Confirm no real API keys are stored in the JSON.
