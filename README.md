@@ -1,10 +1,10 @@
 # Ghostwriter n8n
 
-## v2.0 Status
+## v2.3 Status
 
-Ghostwriter n8n is now a **v2.0 transfer-ready workflow specification package** for recreating a Ghostwriter Story Generator workflow in n8n.
+Ghostwriter n8n is now a **v2.3 plugin-synced workflow package** for the Ghostwriter Automation WordPress plugin.
 
-This repository contains documentation, prompts, JSON schemas, examples, test cases, validation guidance, and a transfer checklist. It is not a live n8n export yet, and it does not claim that a WordPress callback endpoint already exists.
+This repository contains an importable n8n workflow, documentation, prompts, JSON schemas, examples, test cases, validation guidance, and a transfer checklist. The live bridge contract is documented in `docs/contracts/ghostwriter-plugin-n8n-v2.3.md`.
 
 ## Repository Purpose
 
@@ -12,7 +12,7 @@ Ghostwriter n8n specifies an AI narrative orchestration workflow that transforms
 
 The goal is to provide everything needed to recreate or import the workflow into n8n later without inventing the design during transfer.
 
-## Required v2.0 Package Structure
+## Required Package Structure
 
 ```text
 docs/
@@ -24,6 +24,8 @@ docs/
   testing-plan.md
   transfer-checklist.md
   importing-into-n8n.md
+  contracts/
+    ghostwriter-plugin-n8n-v2.3.md
 
 prompts/
   01-creative-interpretation.md
@@ -80,7 +82,8 @@ Webhook or Manual Trigger
 → Cover Brief Generation
 → Final Story Package
 → Telemetry Events
-→ Optional Callback Payload
+→ Optional Progress Callbacks
+→ Optional Complete/Failure Callback Payload
 ```
 
 The workflow is intentionally not split into separate workflows by length. Length profile, framework, act structure, scene count, and drafting section count are selected dynamically.
@@ -196,11 +199,13 @@ The final package includes:
 }
 ```
 
-## WordPress Callback-Ready Contract
+## WordPress Plugin Bridge Contract
 
-The final workflow design is callback-ready for a future WordPress plugin endpoint. The contract supports progress, failure, and complete payloads, but this repository does not claim that endpoint already exists.
+The workflow is synced to the current Ghostwriter Automation WordPress plugin bridge contract. The workflow accepts plugin fields such as `genre` and `contract`, sends callbacks only when `callback_url` starts with `https://`, and authenticates callbacks with the shared secret header `X-Ghostwriter-Secret` sourced from `GHOSTWRITER_CALLBACK_SECRET`.
 
-See `docs/wordpress-integration-contract.md` and `schemas/wordpress-callback.schema.json` before implementing WordPress delivery.
+Progress callbacks use HTTP Request nodes and include top-level `stage`, `progress`, and `message` alongside the nested latest telemetry `event`. Terminal callbacks keep the plugin-saveable shapes `{ session_id, callback_type: "complete", status: "complete", result: final_story_package }` and `{ session_id, callback_type: "failure", status: "failed", error }`.
+
+See `docs/wordpress-integration-contract.md`, `docs/contracts/ghostwriter-plugin-n8n-v2.3.md`, and `schemas/wordpress-callback.schema.json` before deploying WordPress delivery.
 
 ## Prompt Pack
 
@@ -230,6 +235,7 @@ Schemas in `schemas/` define the stable contracts between nodes. At transfer tim
 - **v1.8:** WordPress callback-ready design.
 - **v1.9:** Cover image integration stub.
 - **v2.0:** Ready-to-transfer n8n build package.
+- **v2.3:** Synced to the live Ghostwriter Automation WordPress plugin bridge contract.
 
 Detailed roadmap: `docs/build-roadmap.md`.
 
@@ -242,9 +248,9 @@ This repository now includes a single importable n8n workflow JSON file:
 workflows/ghostwriter-story-generator-v2.import.json
 ```
 
-Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, callback-ready HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
+Import guidance is available in `docs/importing-into-n8n.md`. The workflow uses Manual Trigger and Webhook Trigger paths that feed into the same normalized flow, Gemini HTTP Request placeholder nodes with environment variable expressions such as `{{$env.GEMINI_API_KEY}}`, dynamic storyboard looping, JSON parsing/error handling, progress callback payload Code nodes, progress callback HTTP Request nodes, callback-ready terminal HTTP Request nodes, and a cover brief stub with `cover_image_url: null`.
 
-After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and optionally `GHOSTWRITER_CALLBACK_TOKEN` in n8n. Do not hardcode real API keys in the workflow JSON.
+After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and `GHOSTWRITER_CALLBACK_SECRET` when the WordPress plugin shared secret is configured. Do not hardcode real API keys in the workflow JSON.
 
 ## Transfer Path
 
@@ -258,12 +264,12 @@ After import, configure `GEMINI_API_KEY`, `GEMINI_MODEL`, and optionally `GHOSTW
 
 ## Definition of Done for This Repository
 
-- README reflects v2.0 completion.
+- README reflects v2.3 plugin-contract sync.
 - Required folders and files exist.
 - Every schema is valid JSON Schema syntax.
 - Every AI prompt asks for strict JSON-only output.
 - Node-by-node instructions are detailed enough to recreate the workflow in n8n.
 - Test prompts cover fiction and non-fiction.
 - Transfer checklist is practical and step-by-step.
-- No false claims are made that the workflow is already imported into n8n.
-- No false claims are made that live WordPress integration already exists.
+- Workflow JSON remains importable and contract-compatible with the Ghostwriter Automation WordPress plugin.
+- Callback authentication uses `X-Ghostwriter-Secret` and `GHOSTWRITER_CALLBACK_SECRET`.

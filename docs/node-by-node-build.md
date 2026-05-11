@@ -2,11 +2,11 @@
 
 ## Build Assumptions
 
-- This is a single n8n workflow named `Ghostwriter Story Generator v2.0`.
+- This is a single n8n workflow named `Ghostwriter Story Generator v2.3`.
 - Gemini-compatible AI calls return strict JSON only.
 - Each AI node is followed by JSON parse and schema validation.
 - Manual trigger and webhook trigger should normalize into the same internal input shape.
-- WordPress callbacks are optional and callback-ready only; no live endpoint is assumed.
+- WordPress callbacks are optional and are synced to the Ghostwriter Automation plugin bridge contract. Callback authentication uses `X-Ghostwriter-Secret` from `GHOSTWRITER_CALLBACK_SECRET`.
 
 ## Data Naming Convention
 
@@ -65,7 +65,7 @@ Use these top-level keys as the workflow progresses:
 
 **Type:** Code
 
-**Purpose:** Append an `accepted` telemetry event with progress `2`.
+**Purpose:** Append an `accepted` telemetry event with progress `2`, then flow through the progress callback payload builder, HTTPS guard, and optional HTTP Request node.
 
 **Validation:** Event must match `schemas/telemetry-event.schema.json`.
 
@@ -133,7 +133,7 @@ Use these top-level keys as the workflow progresses:
 
 **Type:** Code
 
-**Purpose:** Add `creative_interpretation` event at progress `12`.
+**Purpose:** Add `creative_interpretation` event at progress `12`, then flow through the progress callback payload builder, HTTPS guard, and optional HTTP Request node.
 
 ## Node 12 — Enforce Length Profile and Public Cap
 
@@ -389,6 +389,17 @@ Use these top-level keys as the workflow progresses:
 
 **Progress:** `100`.
 
+
+## Progress Callback Node Pattern
+
+After each major telemetry Code node (`accepted`, `creative_interpretation`, `story_bible`, `story_architecture`, `storyboard`, and per-section `drafting`):
+
+1. Use a Code node only to build `progress_callback_payload`. The payload must include top-level `stage`, `progress`, and `message` copied from the latest telemetry event, plus the nested `event` object and `details.event`.
+2. Use an IF node to check `input.callback_url` exists and starts with `https://`.
+3. On the true path, call the callback URL with an HTTP Request node using `POST`, `Content-Type: application/json`, and `X-Ghostwriter-Secret: {{$env.GHOSTWRITER_CALLBACK_SECRET}}`. Configure the HTTP Request node with `ignoreResponseCode` and continue-on-fail behavior.
+4. Wire both the true and false paths back to the normal story-generation path so missing, non-HTTPS, or failing progress callbacks do not stop the workflow.
+5. Do not make HTTP requests from Code nodes.
+
 ## Node 43 — Callback URL Present?
 
 **Type:** IF
@@ -415,13 +426,15 @@ Use these top-level keys as the workflow progresses:
 
 **URL:** `input.callback_url`
 
-**Failure behavior:** Log a warning telemetry event; do not change final story status to failed if story generation completed.
+**Headers:** `Content-Type: application/json`, `X-Ghostwriter-Secret: {{$env.GHOSTWRITER_CALLBACK_SECRET}}`
+
+**Failure behavior:** Ignore non-2xx response codes; do not change final story status to failed if story generation completed.
 
 ## Node 46 — Respond With Final Package
 
 **Type:** Respond to Webhook / Set for manual mode
 
-**Purpose:** Return the final v2.0 story package.
+**Purpose:** Return the final v2.3 story package.
 
 ## JSON Parsing Guidance
 

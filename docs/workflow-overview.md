@@ -1,8 +1,8 @@
-# Ghostwriter n8n v2.0 Workflow Overview
+# Ghostwriter n8n v2.3 Workflow Overview
 
 ## Purpose
 
-Ghostwriter n8n v2.0 is a transfer-ready specification package for recreating a single n8n workflow that turns a compact user idea into a structured story package. This repository does not claim that a live n8n workflow has already been imported or that a WordPress endpoint already exists.
+Ghostwriter n8n v2.3 is an importable single-workflow package synced to the Ghostwriter Automation WordPress plugin bridge contract. It turns a compact user idea into a structured story package while preserving plugin fields such as `genre` and `contract` and using authenticated callbacks when `callback_url` is HTTPS.
 
 ## Single Workflow Principle
 
@@ -30,7 +30,8 @@ Webhook or Manual Trigger
 → Cover Brief Generation
 → Final Story Package
 → Telemetry Events
-→ Optional Callback Payload
+→ Optional Progress Callbacks
+→ Optional Complete/Failure Callback Payload
 ```
 
 ## Length Profiles
@@ -79,7 +80,7 @@ The storyboard is the last planning artifact before drafting. Each storyboard it
 | Continuity Editor | `continuity-report.schema.json` | Compare prose against prompt, bible, act structure, storyboard, motifs, emotional arc, and framework. |
 | Final Polish | `final-story-package.schema.json` | Produce final readable story package and metadata. |
 | Telemetry | `telemetry-event.schema.json` | Emit progress, warning, failure, and completion events. |
-| Callback | `wordpress-callback.schema.json` | Shape optional future WordPress callback payloads. |
+| Callback | `wordpress-callback.schema.json` | Shape optional progress, complete, and failure WordPress callback payloads. |
 
 ## Failure Handling Summary
 

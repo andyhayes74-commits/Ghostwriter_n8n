@@ -2,7 +2,9 @@
 
 ## Status
 
-This is a callback-ready contract for a future Ghostwriter Automation WordPress plugin integration. It does not claim that a live WordPress endpoint currently exists.
+This contract is synced to the current Ghostwriter Automation WordPress plugin bridge. The n8n workflow accepts plugin dispatch payloads, preserves plugin-owned fields, and posts callback payloads that WordPress can use to show progress and save the final story.
+
+For the exact live bridge version, see `docs/contracts/ghostwriter-plugin-n8n-v2.3.md`.
 
 ## Input Payload From WordPress or Manual Testing
 
@@ -13,6 +15,11 @@ This is a callback-ready contract for a future Ghostwriter Automation WordPress 
   "author_name": "Andy Hayes",
   "mode": "public",
   "requested_length_profile": "short_story",
+  "genre": "Speculative Fiction",
+  "contract": {
+    "name": "ghostwriter-plugin-n8n",
+    "version": "2.3"
+  },
   "callback_url": "https://example.com/wp-json/ghostwriter/v1/callback",
   "metadata": {
     "source": "wordpress",
@@ -35,7 +42,9 @@ This is a callback-ready contract for a future Ghostwriter Automation WordPress 
 - `author_name`: displayed author attribution; default `Ghostwriter`.
 - `mode`: `public` or `internal`; default `public`.
 - `requested_length_profile`: hint only; creative interpretation may adjust within allowed limits.
-- `callback_url`: optional future callback destination.
+- `genre`: plugin-selected or user-selected genre. The workflow preserves this value in normalized input and defaults it to `null` only when absent.
+- `contract`: plugin bridge contract object. The workflow preserves this value in normalized input and defaults it to `null` only when absent.
+- `callback_url`: optional callback destination. Callbacks are attempted only when this value starts with `https://`.
 - `metadata`: opaque object passed through final payload.
 - `constraints`: user or site constraints.
 
@@ -43,31 +52,64 @@ This is a callback-ready contract for a future Ghostwriter Automation WordPress 
 
 Public mode caps at `long_short_story` and 7,500 target words. If a user requests `novelette` or `novella`, the workflow should emit a warning and normalize to `long_short_story` unless internal mode is explicitly enabled.
 
+## Callback Authentication
+
+n8n sends the shared secret in this header:
+
+```http
+X-Ghostwriter-Secret: <GHOSTWRITER_CALLBACK_SECRET>
+```
+
+Configure the secret in n8n with the environment variable `GHOSTWRITER_CALLBACK_SECRET`. When the WordPress plugin has a shared secret configured, this variable is required for WordPress to accept callbacks and save completed n8n stories.
+
+The v2.3 live bridge contract uses only `X-Ghostwriter-Secret` for callback authentication.
+
 ## Callback Payload Types
 
 All callback payloads validate against `schemas/wordpress-callback.schema.json`.
 
 ### Progress Callback
 
+Progress callbacks are optional and are sent by HTTP Request nodes after major telemetry events when `callback_url` starts with `https://`. Code nodes build the payload only; they do not make internal HTTP requests. A progress callback failure must not fail the workflow.
+
 ```json
 {
   "session_id": "gw_20260507_001",
   "callback_type": "progress",
   "status": "running",
+  "stage": "storyboard",
+  "progress": 45,
+  "message": "Executable storyboard plan created.",
   "event": {
     "event_id": "evt_001",
     "session_id": "gw_20260507_001",
     "stage": "storyboard",
-    "status": "running",
+    "status": "complete",
     "progress": 45,
-    "message": "Designing scene beats and act progression.",
+    "message": "Executable storyboard plan created.",
     "timestamp": "2026-05-07T12:00:00Z",
-    "severity": "info"
+    "severity": "info",
+    "details": {}
+  },
+  "details": {
+    "event": {
+      "event_id": "evt_001",
+      "session_id": "gw_20260507_001",
+      "stage": "storyboard",
+      "status": "complete",
+      "progress": 45,
+      "message": "Executable storyboard plan created.",
+      "timestamp": "2026-05-07T12:00:00Z",
+      "severity": "info",
+      "details": {}
+    }
   }
 }
 ```
 
 ### Failure Callback
+
+Keep this exact terminal failure shape so WordPress can associate the failure with the originating session:
 
 ```json
 {
@@ -84,6 +126,8 @@ All callback payloads validate against `schemas/wordpress-callback.schema.json`.
 ```
 
 ### Complete Callback
+
+Keep this exact terminal completion shape so WordPress can save the generated story from `result`:
 
 ```json
 {
@@ -110,6 +154,8 @@ All callback payloads validate against `schemas/wordpress-callback.schema.json`.
 ## n8n Callback Behavior
 
 - If `callback_url` is absent, skip HTTP callbacks and return the final package in the webhook response.
-- If `callback_url` is present, send progress and terminal callbacks with HTTP Request nodes.
-- Callback HTTP failures should be logged as warnings and should not corrupt the final story package.
-- The WordPress side should verify `session_id` and, in production, authenticate requests with a shared secret or signed header.
+- If `callback_url` does not start with `https://`, skip callbacks and continue the workflow.
+- If `callback_url` starts with `https://`, send progress callbacks through HTTP Request nodes after major telemetry events and terminal complete/failure callbacks at the end.
+- Progress callback failures are ignored by the progress HTTP Request nodes and should not corrupt the final story package.
+- Terminal callback HTTP Request nodes ignore non-2xx response codes.
+- The WordPress side should verify `session_id` and `X-Ghostwriter-Secret` before saving a result or showing progress.
