@@ -51,8 +51,8 @@
   },
   "warnings": [],
   "automation_notes": [
-    "Generated from v2.0 transfer-ready specification.",
+    "Generated from v2.3 plugin-synced workflow contract.",
     "Cover image generation is not implemented; cover_image_url remains null.",
-    "WordPress callback payload is contract-ready but no endpoint is assumed."
+    "WordPress callback payload is synced to the plugin bridge contract."
   ]
 }

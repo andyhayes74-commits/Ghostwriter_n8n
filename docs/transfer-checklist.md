@@ -1,10 +1,10 @@
 # Transfer Checklist
 
-Use this checklist when recreating the Ghostwriter v2.0 specification in n8n.
+Use this checklist when recreating the Ghostwriter v2.3 specification in n8n.
 
 ## 1. Repository Readiness
 
-- [ ] Read `README.md` and confirm v2.0 scope.
+- [ ] Read `README.md` and confirm v2.3 plugin-contract scope.
 - [ ] Review `docs/workflow-overview.md` for the end-to-end flow.
 - [ ] Review `docs/build-roadmap.md` to understand the staged design.
 - [ ] Confirm schemas in `schemas/` are valid JSON Schema files.
@@ -13,10 +13,10 @@ Use this checklist when recreating the Ghostwriter v2.0 specification in n8n.
 
 ## 2. n8n Project Setup
 
-- [ ] Create a new n8n workflow named `Ghostwriter Story Generator v2.0`.
+- [ ] Create or import a single n8n workflow named `Ghostwriter Story Generator v2.3`.
 - [ ] Add Gemini API credentials.
-- [ ] Add optional HTTP credentials or headers for future WordPress callbacks.
-- [ ] Add environment variables for model names, public word cap, and callback signing secret if used.
+- [ ] Configure `GHOSTWRITER_CALLBACK_SECRET` so callbacks send `X-Ghostwriter-Secret`.
+- [ ] Add environment variables for model names, public word cap, and callback secret if used.
 - [ ] Keep manual testing enabled before exposing webhook mode.
 
 ## 3. Node Construction

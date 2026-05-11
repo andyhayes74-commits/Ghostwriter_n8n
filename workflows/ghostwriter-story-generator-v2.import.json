@@ -1,5 +1,5 @@
 {
-  "name": "Ghostwriter Story Generator v2.0",
+  "name": "Ghostwriter Story Generator v2.3",
   "nodes": [
     {
       "parameters": {},
@@ -30,7 +30,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $json.body ?? $json;\nconst input = {\n  session_id: raw.session_id || raw.input?.session_id || `manual_${Date.now()}`,\n  story_prompt: raw.story_prompt || raw.input?.story_prompt || 'A frog named Jim cannot find love because he sings too loudly for the pond, until a quiet moth teaches him to listen to the night.',\n  author_name: raw.author_name || raw.input?.author_name || 'Ghostwriter',\n  mode: raw.mode || raw.input?.mode || 'public',\n  requested_length_profile: raw.requested_length_profile || raw.input?.requested_length_profile || null,\n  callback_url: raw.callback_url || raw.input?.callback_url || null,\n  metadata: raw.metadata || raw.input?.metadata || {},\n  constraints: raw.constraints || raw.input?.constraints || { content_rating: 'general', avoid: [] }\n};\nreturn [{ json: { input, telemetry_events: [], raw_input: raw } }];"
+        "jsCode": "const raw = $json.body ?? $json;\nconst input = {\n  session_id: raw.session_id || raw.input?.session_id || `manual_${Date.now()}`,\n  story_prompt: raw.story_prompt || raw.input?.story_prompt || 'A frog named Jim cannot find love because he sings too loudly for the pond, until a quiet moth teaches him to listen to the night.',\n  author_name: raw.author_name || raw.input?.author_name || 'Ghostwriter',\n  mode: raw.mode || raw.input?.mode || 'public',\n  requested_length_profile: raw.requested_length_profile || raw.input?.requested_length_profile || null,\n  genre: raw.genre ?? raw.input?.genre ?? null,\n  contract: raw.contract ?? raw.input?.contract ?? null,\n  callback_url: raw.callback_url || raw.input?.callback_url || null,\n  metadata: raw.metadata || raw.input?.metadata || {},\n  constraints: raw.constraints || raw.input?.constraints || { content_rating: 'general', avoid: [] }\n};\nreturn [{ json: { input, telemetry_events: [], raw_input: raw } }];"
       },
       "id": "c6340108-2a80-474d-a1da-7142adbc9a04",
       "name": "Normalize Input",
@@ -1109,8 +1109,8 @@
               "value": "application/json"
             },
             {
-              "name": "X-Ghostwriter-Token",
-              "value": "={{$env.GHOSTWRITER_CALLBACK_TOKEN}}"
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
             }
           ]
         },
@@ -1203,8 +1203,8 @@
               "value": "application/json"
             },
             {
-              "name": "X-Ghostwriter-Token",
-              "value": "={{$env.GHOSTWRITER_CALLBACK_TOKEN}}"
+              "name": "X-Ghostwriter-Secret",
+              "value": "={{$env.GHOSTWRITER_CALLBACK_SECRET}}"
             }
           ]
         },
@@ -1240,6 +1240,84 @@
       "position": [
         4420,
         440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "11d18837-7ad6-4448-aa6f-7389fb9d62e6",
+      "name": "Optional Progress Callback - Accepted",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "235b6d97-2dce-4832-bc56-92f9e5cbae8a",
+      "name": "Optional Progress Callback - Interpretation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2730,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "8830eba1-acf0-42c3-895c-d5e492eeec97",
+      "name": "Optional Progress Callback - Story Bible",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4030,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "16275324-ed62-479a-a6d0-b3456c3d37c5",
+      "name": "Optional Progress Callback - Architecture",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5330,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "4233cfd0-c48e-4259-a232-ff61412cd241",
+      "name": "Optional Progress Callback - Storyboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6630,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst callbackUrl = item.input?.callback_url;\nif (callbackUrl && callbackUrl.startsWith('https://')) {\n  const events = item.telemetry_events || [];\n  const event = events[events.length - 1] || null;\n  const payload = {\n    session_id: item.input?.session_id || item.session_id || 'unknown',\n    callback_type: 'progress',\n    status: 'running',\n    event\n  };\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      uri: callbackUrl,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Ghostwriter-Secret': process.env.GHOSTWRITER_CALLBACK_SECRET || ''\n      },\n      body: payload,\n      json: true,\n      timeout: 30000\n    });\n  } catch (error) {\n    item.progress_callback_warning = {\n      stage: event?.stage || 'unknown',\n      message: error.message || 'Progress callback failed.'\n    };\n  }\n}\nreturn [{ json: item }];"
+      },
+      "id": "8a8a67e6-a83c-4bb5-a0db-86f732ccedd2",
+      "name": "Optional Progress Callback - Drafting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7410,
+        40
       ]
     }
   ],
@@ -1282,7 +1360,7 @@
       "main": [
         [
           {
-            "node": "Validate Input",
+            "node": "Optional Progress Callback - Accepted",
             "type": "main",
             "index": 0
           }
@@ -1446,7 +1524,7 @@
       "main": [
         [
           {
-            "node": "Build Story Bible Prompt",
+            "node": "Optional Progress Callback - Interpretation",
             "type": "main",
             "index": 0
           }
@@ -1508,7 +1586,7 @@
       "main": [
         [
           {
-            "node": "Build Story Architecture Prompt",
+            "node": "Optional Progress Callback - Story Bible",
             "type": "main",
             "index": 0
           }
@@ -1570,7 +1648,7 @@
       "main": [
         [
           {
-            "node": "Build Storyboard Prompt",
+            "node": "Optional Progress Callback - Architecture",
             "type": "main",
             "index": 0
           }
@@ -1632,7 +1710,7 @@
       "main": [
         [
           {
-            "node": "Split Storyboard Sections",
+            "node": "Optional Progress Callback - Storyboard",
             "type": "main",
             "index": 0
           }
@@ -1672,7 +1750,7 @@
       "main": [
         [
           {
-            "node": "Build Section Draft Prompt",
+            "node": "Optional Progress Callback - Drafting",
             "type": "main",
             "index": 0
           }
@@ -2001,6 +2079,72 @@
         [
           {
             "node": "Respond With Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Accepted": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Interpretation": {
+      "main": [
+        [
+          {
+            "node": "Build Story Bible Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Story Bible": {
+      "main": [
+        [
+          {
+            "node": "Build Story Architecture Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Architecture": {
+      "main": [
+        [
+          {
+            "node": "Build Storyboard Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Storyboard": {
+      "main": [
+        [
+          {
+            "node": "Split Storyboard Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optional Progress Callback - Drafting": {
+      "main": [
+        [
+          {
+            "node": "Build Section Draft Prompt",
             "type": "main",
             "index": 0
           }

@@ -38,7 +38,7 @@ The editor compares final prose against the original prompt, creative interpreta
 
 The package includes session metadata, title, author name, genre, synopsis, story body, length profile, word count, selected structures, cover brief, `cover_image_url`, warnings, telemetry summary, and automation notes.
 
-**Review check:** package shape is stable enough for future WordPress consumption.
+**Review check:** package shape is stable enough for WordPress to save from the complete callback `result`.
 
 ## v1.5 — Error Handling and Guardrails
 
@@ -52,9 +52,9 @@ Add prompt validation, minimum and maximum word-count rules, public-mode cap to 
 
 **Goal:** accept external requests while keeping manual testing easy.
 
-Primary input is a webhook payload. Manual trigger uses the same normalized shape. Expected minimal payload: `session_id`, `story_prompt`; optional fields include `author_name`, `mode`, `requested_length_profile`, `callback_url`, `metadata`, and `constraints`.
+Primary input is a webhook payload. Manual trigger uses the same normalized shape. Expected minimal payload: `session_id`, `story_prompt`; optional fields include `author_name`, `mode`, `requested_length_profile`, `genre`, `contract`, `callback_url`, `metadata`, and `constraints`.
 
-**Review check:** webhook mode is specified, but no live endpoint is claimed.
+**Review check:** webhook mode preserves plugin-owned fields before story generation begins.
 
 ## v1.7 — Telemetry Events
 
@@ -64,13 +64,13 @@ Emit events for accepted, interpreting, planning, storyboarding, drafting, editi
 
 **Review check:** telemetry is defined independently of a live frontend.
 
-## v1.8 — WordPress Callback-Ready Design
+## v1.8 — WordPress Callback Design
 
-**Goal:** prepare callback payloads without depending on WordPress availability.
+**Goal:** prepare callback payloads for the WordPress plugin bridge.
 
-Define progress, failure, and complete callback bodies. If callback URL is absent, the workflow still returns the final package directly. If callback is present, n8n HTTP Request nodes should post callback payloads and log failures.
+Define progress, failure, and complete callback bodies. If callback URL is absent, the workflow still returns the final package directly. If callback is present and starts with `https://`, n8n posts progress callbacks after major telemetry events and terminal complete/failure callbacks at the end.
 
-**Review check:** docs clearly state that the WordPress plugin endpoint must be created/configured later.
+**Review check:** callbacks use `X-Ghostwriter-Secret` from `GHOSTWRITER_CALLBACK_SECRET` and keep terminal payload shapes stable.
 
 ## v1.9 — Cover Image Integration Stub
 

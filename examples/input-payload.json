@@ -4,6 +4,8 @@
   "author_name": "Andy Hayes",
   "mode": "public",
   "requested_length_profile": "short_story",
+  "genre": "Speculative Fiction",
+  "contract": "ghostwriter-plugin-n8n-v2.3",
   "callback_url": null,
   "metadata": {
     "source": "manual_test",

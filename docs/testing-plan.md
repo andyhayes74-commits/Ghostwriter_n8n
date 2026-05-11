@@ -2,7 +2,7 @@
 
 ## Goals
 
-Validate that the v2.0 specification can be recreated in n8n with predictable JSON contracts, dynamic drafting behavior, useful telemetry, and callback-ready output.
+Validate that the v2.3 specification can be recreated in n8n with predictable JSON contracts, dynamic drafting behavior, useful telemetry, and plugin-synced callback output.
 
 ## Static Repository Checks
 
