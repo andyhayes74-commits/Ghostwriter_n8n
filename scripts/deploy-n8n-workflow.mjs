@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const WORKFLOW_PATH = resolve('workflows/ghostwriter-story-generator-v2.import.json');
 const REQUIRED_FIELDS = ['name', 'nodes', 'connections', 'settings'];
-const READ_ONLY_FIELDS = [
+const EXCLUDED_UPDATE_FIELDS = [
   'id',
   'versionId',
   'active',
@@ -17,8 +17,10 @@ const READ_ONLY_FIELDS = [
   'ownedBy',
   'homeProject',
   'usedCredentials',
+  'tags',
+  'pinData',
+  'staticData',
 ];
-const OPTIONAL_DEPLOY_FIELDS = ['staticData', 'tags', 'pinData'];
 
 function parseBool(value, defaultValue = false) {
   if (value === undefined || value === null || value === '') {
@@ -95,12 +97,6 @@ function sanitizeWorkflow(workflow) {
     sanitized[field] = workflow[field];
   }
 
-  for (const field of OPTIONAL_DEPLOY_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(workflow, field)) {
-      sanitized[field] = workflow[field];
-    }
-  }
-
   return sanitized;
 }
 
@@ -115,13 +111,13 @@ function summarizeWorkflow(workflow, required, targetWorkflowId, dryRun, payload
     console.log(`- ${field}: ${required[field] ? 'present' : 'missing'}`);
   }
 
-  console.log(`Read-only fields always removed from update payload when present: ${READ_ONLY_FIELDS.join(', ')}`);
+  console.log(`Read-only/excluded fields always removed from update payload when present: ${EXCLUDED_UPDATE_FIELDS.join(', ')}`);
 
-  const readOnlyPresent = READ_ONLY_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(workflow, field));
-  if (readOnlyPresent.length > 0) {
-    console.log(`Read-only fields removed from this workflow: ${readOnlyPresent.join(', ')}`);
+  const excludedPresent = EXCLUDED_UPDATE_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(workflow, field));
+  if (excludedPresent.length > 0) {
+    console.log(`Read-only/excluded fields removed from this workflow: ${excludedPresent.join(', ')}`);
   } else {
-    console.log('Read-only fields removed from this workflow: [none present]');
+    console.log('Read-only/excluded fields removed from this workflow: [none present]');
   }
 
   console.log(`Update payload fields to send: ${Object.keys(payload).join(', ')}`);
