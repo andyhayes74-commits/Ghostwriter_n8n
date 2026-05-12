@@ -54,7 +54,7 @@ The v2.3 live bridge contract uses only `X-Ghostwriter-Secret` for callback auth
 
 Progress callbacks are sent after major telemetry nodes. The workflow uses dedicated n8n HTTP Request nodes for delivery; Code nodes only build the payload. Delivery failures are configured not to fail the story-generation workflow.
 
-Progress callbacks duplicate plugin-friendly values at the top level while keeping the full telemetry event nested under `event`.
+Progress callbacks duplicate plugin-friendly values at the top level while keeping the full telemetry event nested under `event`. They now include Living Storyboard state in both top-level `build_state` / `changed_fields` and nested `details.build_state` / `details.changed_fields`. `build_state` is partial and accumulative by stage: each stage only sends story-state fields already available at that point in generation.
 
 ```json
 {
@@ -64,6 +64,19 @@ Progress callbacks duplicate plugin-friendly values at the top level while keepi
   "stage": "storyboard",
   "progress": 45,
   "message": "Executable storyboard plan created.",
+  "build_state": {
+    "synopsis": [],
+    "structure": {},
+    "generation_details": {
+      "stage": "storyboard",
+      "progress": 45
+    }
+  },
+  "changed_fields": [
+    "synopsis",
+    "structure",
+    "generation_details"
+  ],
   "event": {
     "event_id": "evt_001",
     "session_id": "gw_20260507_001",
@@ -76,6 +89,19 @@ Progress callbacks duplicate plugin-friendly values at the top level while keepi
     "details": {}
   },
   "details": {
+    "build_state": {
+      "synopsis": [],
+      "structure": {},
+      "generation_details": {
+        "stage": "storyboard",
+        "progress": 45
+      }
+    },
+    "changed_fields": [
+      "synopsis",
+      "structure",
+      "generation_details"
+    ],
     "event": {
       "event_id": "evt_001",
       "session_id": "gw_20260507_001",
