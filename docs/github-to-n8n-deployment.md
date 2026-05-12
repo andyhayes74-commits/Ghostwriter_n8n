@@ -23,6 +23,18 @@ Then:
 2. copy the target workflow ID from n8n, and
 3. keep a manual export or backup of the current n8n workflow before the first GitHub-driven deployment.
 
+## Gemini credentials
+
+Gemini HTTP Request nodes must authenticate with the stored n8n Header Auth credential named `Header Auth account`. That credential supplies the `x-goog-api-key` header value for Gemini REST API calls.
+
+The workflow JSON must never contain Gemini API keys, Gemini model environment variables, or Gemini query-string key authentication. In particular, do not commit any of these strings:
+
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `?key={{$env.GEMINI_API_KEY}}`
+
+Gemini REST API URLs should not include a `key` query parameter; authentication belongs in the stored n8n credential.
+
 ## Required GitHub secrets
 
 Add these repository secrets before running a live deployment:
