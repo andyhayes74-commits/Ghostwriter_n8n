@@ -128,7 +128,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -143,7 +143,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "b88a219f-7dc1-4741-ad1a-baf50bf594fe",
       "name": "AI Creative Interpretation (Gemini HTTP)",
@@ -152,7 +154,12 @@
       "position": [
         1560,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -215,7 +222,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -230,7 +237,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "95b37fe5-1854-4ac5-8949-c7cd87fc25fa",
       "name": "AI Repair Creative JSON (Gemini HTTP)",
@@ -239,7 +248,12 @@
       "position": [
         2600,
         190
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -328,7 +342,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -343,7 +357,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "80bc20cc-46a0-4175-9716-db6da178fa76",
       "name": "AI Story Bible (Gemini HTTP)",
@@ -352,7 +368,12 @@
       "position": [
         3120,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -428,7 +449,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -443,7 +464,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "a6c1bf4d-06da-43fe-a1b0-d5fc26d8d9a4",
       "name": "AI Story Architecture (Gemini HTTP)",
@@ -452,7 +475,12 @@
       "position": [
         4420,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -528,7 +556,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -543,7 +571,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "72de22ba-9a75-419c-b187-b7a58d7f6608",
       "name": "AI Storyboard (Gemini HTTP)",
@@ -552,7 +582,12 @@
       "position": [
         5720,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -668,7 +703,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -683,7 +718,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "ea15a2b6-1ad2-418c-89de-e3b967fe8f4f",
       "name": "AI Draft Section (Gemini HTTP)",
@@ -692,7 +729,12 @@
       "position": [
         7800,
         -80
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -781,7 +823,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -796,7 +838,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "777b6876-f891-44c3-a094-83ea6df7f65c",
       "name": "AI Continuity Editor (Gemini HTTP)",
@@ -805,7 +849,12 @@
       "position": [
         7800,
         180
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -868,7 +917,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -883,7 +932,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "884ff399-ffac-48a7-aeba-d669dcea186c",
       "name": "AI Final Polish (Gemini HTTP)",
@@ -892,7 +943,12 @@
       "position": [
         8840,
         180
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -955,7 +1011,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{$env.GEMINI_MODEL}}:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -970,7 +1026,9 @@
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } }) }}",
         "options": {
           "timeout": 300000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "88f17cd2-b1cb-4abf-ab16-b5c701ede2d5",
       "name": "AI Cover Brief (Gemini HTTP)",
@@ -979,7 +1037,12 @@
       "position": [
         9880,
         180
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {

@@ -5,6 +5,16 @@ import { resolve } from 'node:path';
 
 const WORKFLOW_PATH = resolve('workflows/ghostwriter-story-generator-v2.import.json');
 const REQUIRED_FIELDS = ['name', 'nodes', 'connections', 'settings'];
+const FORBIDDEN_GEMINI_ENV_REFERENCES = [
+  '$env.GEMINI_API_KEY',
+  '$env.GEMINI_MODEL',
+  'GEMINI_API_KEY',
+  'GEMINI_MODEL',
+  '?key={{',
+];
+const FORBIDDEN_GEMINI_ENV_MESSAGE =
+  'Blocked deploy: workflow contains forbidden Gemini environment-variable references. Use n8n stored Header Auth credentials instead.';
+
 const EXCLUDED_UPDATE_FIELDS = [
   'id',
   'versionId',
@@ -62,7 +72,15 @@ function redactSecrets(text, secrets) {
 
 async function readJsonWorkflow() {
   const raw = await readFile(WORKFLOW_PATH, 'utf8');
-  return JSON.parse(raw);
+  return { raw, workflow: JSON.parse(raw) };
+}
+
+function assertNoForbiddenGeminiEnvReferences(rawWorkflow) {
+  const hasForbiddenReference = FORBIDDEN_GEMINI_ENV_REFERENCES.some((reference) => rawWorkflow.includes(reference));
+
+  if (hasForbiddenReference) {
+    throw new Error(FORBIDDEN_GEMINI_ENV_MESSAGE);
+  }
 }
 
 function validateWorkflow(workflow) {
@@ -197,7 +215,8 @@ async function main() {
   const activeEnvProvided = process.env.N8N_DEPLOY_ACTIVE !== undefined && process.env.N8N_DEPLOY_ACTIVE !== '';
   const activeOverride = activeEnvProvided ? parseBool(process.env.N8N_DEPLOY_ACTIVE) : undefined;
 
-  const workflow = await readJsonWorkflow();
+  const { raw, workflow } = await readJsonWorkflow();
+  assertNoForbiddenGeminiEnvReferences(raw);
   const required = validateWorkflow(workflow);
   const payload = sanitizeWorkflow(workflow);
   summarizeWorkflow(workflow, required, workflowId, dryRun, payload);
