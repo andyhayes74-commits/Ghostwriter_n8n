@@ -32,6 +32,9 @@ jobs:
       - name: Validate workflow JSON
         run: python3 -m json.tool workflows/ghostwriter-story-generator-v2.import.json > /tmp/ghostwriter-workflow.json
 
+      - name: Audit workflow runtime stability
+        run: node scripts/audit-workflow.mjs
+
       - name: Deploy workflow to n8n
         env:
           N8N_BASE_URL: ${{ secrets.N8N_BASE_URL }}
