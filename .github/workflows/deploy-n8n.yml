@@ -1,0 +1,40 @@
+name: Deploy Ghostwriter workflow to n8n
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate only, do not deploy"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check deploy script syntax
+        run: node --check scripts/deploy-n8n-workflow.mjs
+
+      - name: Validate workflow JSON
+        run: python3 -m json.tool workflows/ghostwriter-story-generator-v2.import.json > /tmp/ghostwriter-workflow.json
+
+      - name: Deploy workflow to n8n
+        env:
+          N8N_BASE_URL: ${{ secrets.N8N_BASE_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_WORKFLOW_ID: ${{ secrets.N8N_WORKFLOW_ID }}
+          N8N_DEPLOY_ACTIVE: ${{ secrets.N8N_DEPLOY_ACTIVE }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: node scripts/deploy-n8n-workflow.mjs

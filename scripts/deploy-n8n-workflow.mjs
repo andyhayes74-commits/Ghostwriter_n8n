@@ -1,0 +1,287 @@
+#!/usr/bin/env node
+
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
+const WORKFLOW_PATH = resolve('workflows/ghostwriter-story-generator-v2.import.json');
+const REQUIRED_FIELDS = ['name', 'nodes', 'connections', 'settings'];
+const READ_ONLY_FIELDS = [
+  'id',
+  'versionId',
+  'createdAt',
+  'updatedAt',
+  'triggerCount',
+  'shared',
+  'ownedBy',
+  'homeProject',
+  'usedCredentials',
+];
+const OPTIONAL_DEPLOY_FIELDS = ['staticData', 'tags', 'pinData'];
+const INSTANCE_META_KEYS = [
+  'instanceId',
+  'workflowId',
+  'workflowActivationId',
+  'projectId',
+  'homeProject',
+  'ownerId',
+  'createdBy',
+  'updatedBy',
+];
+
+function parseBool(value, defaultValue = false) {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean value: ${value}`);
+}
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || !value.trim()) {
+    throw new Error(`${name} is required when DRY_RUN=false.`);
+  }
+  return value.trim();
+}
+
+function normalizeBaseUrl(value) {
+  return value.replace(/\/+$/, '');
+}
+
+function redactSecrets(text, secrets) {
+  let redacted = text;
+  for (const secret of secrets) {
+    if (secret) {
+      redacted = redacted.split(secret).join('[REDACTED]');
+    }
+  }
+  return redacted;
+}
+
+async function readJsonWorkflow() {
+  const raw = await readFile(WORKFLOW_PATH, 'utf8');
+  return JSON.parse(raw);
+}
+
+function validateWorkflow(workflow) {
+  if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow)) {
+    throw new Error('Workflow JSON must contain a single workflow object.');
+  }
+
+  const required = {
+    name: typeof workflow.name === 'string' && workflow.name.trim().length > 0,
+    nodes: Array.isArray(workflow.nodes),
+    connections: workflow.connections && typeof workflow.connections === 'object' && !Array.isArray(workflow.connections),
+    settings: workflow.settings && typeof workflow.settings === 'object' && !Array.isArray(workflow.settings),
+  };
+
+  return required;
+}
+
+function assertRequiredFields(required) {
+  const missing = Object.entries(required)
+    .filter(([, exists]) => !exists)
+    .map(([field]) => field);
+
+  if (missing.length > 0) {
+    throw new Error(`Workflow JSON is missing required deployable field(s): ${missing.join(', ')}`);
+  }
+}
+
+function hasInstanceSpecificMeta(meta) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
+    return false;
+  }
+
+  return INSTANCE_META_KEYS.some((key) => Object.prototype.hasOwnProperty.call(meta, key));
+}
+
+function sanitizeWorkflow(workflow, activeOverride, existingWorkflow) {
+  const sanitized = {};
+
+  for (const field of REQUIRED_FIELDS) {
+    sanitized[field] = workflow[field];
+  }
+
+  for (const field of OPTIONAL_DEPLOY_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(workflow, field)) {
+      sanitized[field] = workflow[field];
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(workflow, 'meta') && !hasInstanceSpecificMeta(workflow.meta)) {
+    sanitized.meta = workflow.meta;
+  }
+
+  if (activeOverride !== undefined) {
+    sanitized.active = activeOverride;
+  } else if (existingWorkflow && typeof existingWorkflow.active === 'boolean') {
+    sanitized.active = existingWorkflow.active;
+  }
+
+  return sanitized;
+}
+
+function summarizeWorkflow(workflow, required, targetWorkflowId, dryRun) {
+  console.log(`Mode: ${dryRun ? 'dry run (validate only)' : 'deploy'}`);
+  console.log(`Workflow file: ${WORKFLOW_PATH}`);
+  console.log(`Workflow name: ${workflow.name}`);
+  console.log(`Node count: ${Array.isArray(workflow.nodes) ? workflow.nodes.length : '[invalid nodes field]'}`);
+  console.log(`Target n8n workflow ID: ${targetWorkflowId || '[not set]'}`);
+  console.log('Required fields:');
+  for (const field of REQUIRED_FIELDS) {
+    console.log(`- ${field}: ${required[field] ? 'present' : 'missing'}`);
+  }
+
+  const readOnlyPresent = READ_ONLY_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(workflow, field));
+  if (readOnlyPresent.length > 0) {
+    console.log(`Read-only/instance-specific fields that will be removed: ${readOnlyPresent.join(', ')}`);
+  }
+  if (hasInstanceSpecificMeta(workflow.meta)) {
+    console.log('Instance-specific meta detected and will be removed.');
+  }
+}
+
+async function apiRequest({ baseUrl, workflowId, apiKey, method, path = '', body }) {
+  const url = `${baseUrl}/api/v1/workflows/${encodeURIComponent(workflowId)}${path}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'X-N8N-API-KEY': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  const text = await response.text();
+  let data = undefined;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  return { response, data, text };
+}
+
+async function checkedRequest(options, secrets) {
+  const result = await apiRequest(options);
+  if (!result.response.ok) {
+    const body = result.text || JSON.stringify(result.data ?? '');
+    throw new Error(
+      `${options.method} ${options.path || ''} failed with HTTP ${result.response.status} ${result.response.statusText}: ${redactSecrets(body, secrets)}`,
+    );
+  }
+  return result.data;
+}
+
+async function updateWorkflowWithFallback({ baseUrl, workflowId, apiKey, payload, secrets }) {
+  const firstMethod = 'PUT';
+  const fallbackMethod = 'PATCH';
+  const first = await apiRequest({ baseUrl, workflowId, apiKey, method: firstMethod, body: payload });
+
+  if (first.response.ok) {
+    return { method: firstMethod, data: first.data };
+  }
+
+  if (first.response.status !== 405) {
+    throw new Error(
+      `${firstMethod} update failed with HTTP ${first.response.status} ${first.response.statusText}: ${redactSecrets(first.text || JSON.stringify(first.data ?? ''), secrets)}`,
+    );
+  }
+
+  console.log(`${firstMethod} update returned HTTP 405; retrying once with ${fallbackMethod}.`);
+  const fallback = await apiRequest({ baseUrl, workflowId, apiKey, method: fallbackMethod, body: payload });
+
+  if (!fallback.response.ok) {
+    throw new Error(
+      `${fallbackMethod} update failed with HTTP ${fallback.response.status} ${fallback.response.statusText}: ${redactSecrets(fallback.text || JSON.stringify(fallback.data ?? ''), secrets)}`,
+    );
+  }
+
+  return { method: fallbackMethod, data: fallback.data };
+}
+
+async function setActivation({ baseUrl, workflowId, apiKey, active, secrets }) {
+  const endpoint = active ? '/activate' : '/deactivate';
+  await checkedRequest({ baseUrl, workflowId, apiKey, method: 'POST', path: endpoint }, secrets);
+}
+
+async function main() {
+  const dryRun = parseBool(process.env.DRY_RUN, true);
+  const workflowId = process.env.N8N_WORKFLOW_ID?.trim() || '';
+  const activeEnvProvided = process.env.N8N_DEPLOY_ACTIVE !== undefined && process.env.N8N_DEPLOY_ACTIVE !== '';
+  const activeOverride = activeEnvProvided ? parseBool(process.env.N8N_DEPLOY_ACTIVE) : undefined;
+
+  const workflow = await readJsonWorkflow();
+  const required = validateWorkflow(workflow);
+  summarizeWorkflow(workflow, required, workflowId, dryRun);
+  assertRequiredFields(required);
+
+  if (dryRun) {
+    console.log('Dry run complete. No n8n API calls were made.');
+    return;
+  }
+
+  const baseUrl = normalizeBaseUrl(requireEnv('N8N_BASE_URL'));
+  const apiKey = requireEnv('N8N_API_KEY');
+  const requiredWorkflowId = requireEnv('N8N_WORKFLOW_ID');
+  const secrets = [apiKey];
+
+  let existingWorkflow;
+  try {
+    existingWorkflow = await checkedRequest(
+      { baseUrl, workflowId: requiredWorkflowId, apiKey, method: 'GET' },
+      secrets,
+    );
+    if (typeof existingWorkflow?.active === 'boolean' && activeOverride === undefined) {
+      console.log(`Existing active state detected and will be preserved: ${existingWorkflow.active}`);
+    }
+  } catch (error) {
+    console.warn(`Warning: could not fetch existing workflow before update. ${redactSecrets(error.message, secrets)}`);
+    if (activeOverride === undefined) {
+      console.warn('No active-state override was provided, so the update payload will omit active to avoid accidental deactivation.');
+    }
+  }
+
+  const payload = sanitizeWorkflow(workflow, activeOverride, existingWorkflow);
+  const { method, data } = await updateWorkflowWithFallback({
+    baseUrl,
+    workflowId: requiredWorkflowId,
+    apiKey,
+    payload,
+    secrets,
+  });
+
+  const updatedWorkflow = data?.data ?? data;
+  console.log(`Workflow update succeeded via ${method}: ${updatedWorkflow?.id ?? requiredWorkflowId} / ${updatedWorkflow?.name ?? payload.name}`);
+
+  if (activeOverride !== undefined) {
+    const updatedActive = updatedWorkflow?.active;
+    if (updatedActive !== activeOverride) {
+      try {
+        await setActivation({ baseUrl, workflowId: requiredWorkflowId, apiKey, active: activeOverride, secrets });
+        console.log(`Workflow ${activeOverride ? 'activation' : 'deactivation'} succeeded for ${requiredWorkflowId}.`);
+      } catch (error) {
+        throw new Error(
+          `Workflow updated, but ${activeOverride ? 'activation' : 'deactivation'} failed. ${redactSecrets(error.message, secrets)}`,
+        );
+      }
+    }
+  }
+}
+
+main().catch((error) => {
+  console.error(redactSecrets(error.stack || error.message, [process.env.N8N_API_KEY]));
+  process.exit(1);
+});
