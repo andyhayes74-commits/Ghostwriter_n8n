@@ -15,6 +15,7 @@ const READ_ONLY_FIELDS = [
   'ownedBy',
   'homeProject',
   'usedCredentials',
+  'active',
 ];
 const OPTIONAL_DEPLOY_FIELDS = ['staticData', 'tags', 'pinData'];
 const INSTANCE_META_KEYS = [
@@ -104,7 +105,7 @@ function hasInstanceSpecificMeta(meta) {
   return INSTANCE_META_KEYS.some((key) => Object.prototype.hasOwnProperty.call(meta, key));
 }
 
-function sanitizeWorkflow(workflow, activeOverride, existingWorkflow) {
+function sanitizeWorkflow(workflow) {
   const sanitized = {};
 
   for (const field of REQUIRED_FIELDS) {
@@ -119,12 +120,6 @@ function sanitizeWorkflow(workflow, activeOverride, existingWorkflow) {
 
   if (Object.prototype.hasOwnProperty.call(workflow, 'meta') && !hasInstanceSpecificMeta(workflow.meta)) {
     sanitized.meta = workflow.meta;
-  }
-
-  if (activeOverride !== undefined) {
-    sanitized.active = activeOverride;
-  } else if (existingWorkflow && typeof existingWorkflow.active === 'boolean') {
-    sanitized.active = existingWorkflow.active;
   }
 
   return sanitized;
@@ -185,28 +180,29 @@ async function checkedRequest(options, secrets) {
   return result.data;
 }
 
+function formatFailedRequest(method, result, secrets) {
+  return `${method} update failed with HTTP ${result.response.status} ${result.response.statusText}: ${redactSecrets(result.text || JSON.stringify(result.data ?? ''), secrets)}`;
+}
+
 async function updateWorkflowWithFallback({ baseUrl, workflowId, apiKey, payload, secrets }) {
-  const firstMethod = 'PUT';
-  const fallbackMethod = 'PATCH';
+  const firstMethod = 'PATCH';
+  const fallbackMethod = 'PUT';
   const first = await apiRequest({ baseUrl, workflowId, apiKey, method: firstMethod, body: payload });
 
   if (first.response.ok) {
     return { method: firstMethod, data: first.data };
   }
 
+  const firstError = formatFailedRequest(firstMethod, first, secrets);
   if (first.response.status !== 405) {
-    throw new Error(
-      `${firstMethod} update failed with HTTP ${first.response.status} ${first.response.statusText}: ${redactSecrets(first.text || JSON.stringify(first.data ?? ''), secrets)}`,
-    );
+    throw new Error(firstError);
   }
 
   console.log(`${firstMethod} update returned HTTP 405; retrying once with ${fallbackMethod}.`);
   const fallback = await apiRequest({ baseUrl, workflowId, apiKey, method: fallbackMethod, body: payload });
 
   if (!fallback.response.ok) {
-    throw new Error(
-      `${fallbackMethod} update failed with HTTP ${fallback.response.status} ${fallback.response.statusText}: ${redactSecrets(fallback.text || JSON.stringify(fallback.data ?? ''), secrets)}`,
-    );
+    throw new Error(`${firstError}\n${formatFailedRequest(fallbackMethod, fallback, secrets)}`);
   }
 
   return { method: fallbackMethod, data: fallback.data };
@@ -245,7 +241,7 @@ async function main() {
       secrets,
     );
     if (typeof existingWorkflow?.active === 'boolean' && activeOverride === undefined) {
-      console.log(`Existing active state detected and will be preserved: ${existingWorkflow.active}`);
+      console.log('Existing active state detected and will be left unchanged by omitting active from update payload.');
     }
   } catch (error) {
     console.warn(`Warning: could not fetch existing workflow before update. ${redactSecrets(error.message, secrets)}`);
@@ -254,7 +250,11 @@ async function main() {
     }
   }
 
-  const payload = sanitizeWorkflow(workflow, activeOverride, existingWorkflow);
+  if (activeOverride !== undefined) {
+    console.log('Active override requested and will be applied after successful workflow update.');
+  }
+
+  const payload = sanitizeWorkflow(workflow);
   const { method, data } = await updateWorkflowWithFallback({
     baseUrl,
     workflowId: requiredWorkflowId,

@@ -32,7 +32,7 @@ Add these repository secrets before running a live deployment:
 | `N8N_BASE_URL` | Yes | Base URL for the self-hosted n8n instance, for example `https://n8n.example.com`. |
 | `N8N_API_KEY` | Yes | n8n API key used for the public API request. |
 | `N8N_WORKFLOW_ID` | Yes | Existing n8n workflow ID to update. |
-| `N8N_DEPLOY_ACTIVE` | No | Optional boolean. Defaults to preserving the existing workflow active state. Set to `true` to activate after deployment when supported. |
+| `N8N_DEPLOY_ACTIVE` | No | Optional boolean. Normally leave unset so the current n8n active state remains unchanged. Set only when the deployment should explicitly activate or deactivate the workflow after a successful update. |
 
 Dry runs do not require n8n secrets. If `N8N_WORKFLOW_ID` is present during a dry run, the action prints it; the API key is never printed.
 
@@ -45,7 +45,7 @@ Dry runs do not require n8n secrets. If `N8N_WORKFLOW_ID` is present during a dr
    - `N8N_BASE_URL`
    - `N8N_API_KEY`
    - `N8N_WORKFLOW_ID`
-5. Optionally add `N8N_DEPLOY_ACTIVE=true` only if the GitHub deployment should activate the workflow.
+5. Normally leave `N8N_DEPLOY_ACTIVE` unset. Add `N8N_DEPLOY_ACTIVE=true` or `N8N_DEPLOY_ACTIVE=false` only when the GitHub deployment should explicitly activate or deactivate the workflow after a successful update.
 6. Run **Deploy Ghostwriter workflow to n8n** from the GitHub Actions tab with `dry_run=true`.
 7. Confirm the dry-run output shows the expected workflow name, node count, required fields, and target workflow ID.
 8. Run the same action with `dry_run=false`.
@@ -60,7 +60,8 @@ Dry runs do not require n8n secrets. If `N8N_WORKFLOW_ID` is present during a dr
 - Keep a manual export or backup of the current n8n workflow before the first deployment.
 - If deployment fails, n8n may still have the previous workflow active.
 - The deploy script removes read-only or instance-specific fields such as `id`, `versionId`, timestamps, ownership fields, sharing fields, credential usage fields, and instance-specific `meta` values before sending the update payload.
-- The deploy script fetches the existing workflow first when possible and preserves its active state unless `N8N_DEPLOY_ACTIVE` is explicitly set.
+- n8n treats `active` as read-only in workflow update payloads, so the deploy script never sends `active` in the PATCH or PUT body. Existing active state is left unchanged by omitting `active` from the update payload.
+- `N8N_DEPLOY_ACTIVE` should normally be left unset. If it is explicitly set, the deploy script updates the workflow first and then changes active state only through `POST /api/v1/workflows/{id}/activate` or `POST /api/v1/workflows/{id}/deactivate`.
 
 ## Future option: path-filtered automatic deployment
 
