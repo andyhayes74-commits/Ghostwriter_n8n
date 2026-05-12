@@ -8,6 +8,8 @@ const REQUIRED_FIELDS = ['name', 'nodes', 'connections', 'settings'];
 const READ_ONLY_FIELDS = [
   'id',
   'versionId',
+  'active',
+  'meta',
   'createdAt',
   'updatedAt',
   'triggerCount',
@@ -15,19 +17,8 @@ const READ_ONLY_FIELDS = [
   'ownedBy',
   'homeProject',
   'usedCredentials',
-  'active',
 ];
 const OPTIONAL_DEPLOY_FIELDS = ['staticData', 'tags', 'pinData'];
-const INSTANCE_META_KEYS = [
-  'instanceId',
-  'workflowId',
-  'workflowActivationId',
-  'projectId',
-  'homeProject',
-  'ownerId',
-  'createdBy',
-  'updatedBy',
-];
 
 function parseBool(value, defaultValue = false) {
   if (value === undefined || value === null || value === '') {
@@ -97,14 +88,6 @@ function assertRequiredFields(required) {
   }
 }
 
-function hasInstanceSpecificMeta(meta) {
-  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
-    return false;
-  }
-
-  return INSTANCE_META_KEYS.some((key) => Object.prototype.hasOwnProperty.call(meta, key));
-}
-
 function sanitizeWorkflow(workflow) {
   const sanitized = {};
 
@@ -118,14 +101,10 @@ function sanitizeWorkflow(workflow) {
     }
   }
 
-  if (Object.prototype.hasOwnProperty.call(workflow, 'meta') && !hasInstanceSpecificMeta(workflow.meta)) {
-    sanitized.meta = workflow.meta;
-  }
-
   return sanitized;
 }
 
-function summarizeWorkflow(workflow, required, targetWorkflowId, dryRun) {
+function summarizeWorkflow(workflow, required, targetWorkflowId, dryRun, payload) {
   console.log(`Mode: ${dryRun ? 'dry run (validate only)' : 'deploy'}`);
   console.log(`Workflow file: ${WORKFLOW_PATH}`);
   console.log(`Workflow name: ${workflow.name}`);
@@ -136,13 +115,16 @@ function summarizeWorkflow(workflow, required, targetWorkflowId, dryRun) {
     console.log(`- ${field}: ${required[field] ? 'present' : 'missing'}`);
   }
 
+  console.log(`Read-only fields always removed from update payload when present: ${READ_ONLY_FIELDS.join(', ')}`);
+
   const readOnlyPresent = READ_ONLY_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(workflow, field));
   if (readOnlyPresent.length > 0) {
-    console.log(`Read-only/instance-specific fields that will be removed: ${readOnlyPresent.join(', ')}`);
+    console.log(`Read-only fields removed from this workflow: ${readOnlyPresent.join(', ')}`);
+  } else {
+    console.log('Read-only fields removed from this workflow: [none present]');
   }
-  if (hasInstanceSpecificMeta(workflow.meta)) {
-    console.log('Instance-specific meta detected and will be removed.');
-  }
+
+  console.log(`Update payload fields to send: ${Object.keys(payload).join(', ')}`);
 }
 
 async function apiRequest({ baseUrl, workflowId, apiKey, method, path = '', body }) {
@@ -185,8 +167,8 @@ function formatFailedRequest(method, result, secrets) {
 }
 
 async function updateWorkflowWithFallback({ baseUrl, workflowId, apiKey, payload, secrets }) {
-  const firstMethod = 'PATCH';
-  const fallbackMethod = 'PUT';
+  const firstMethod = 'PUT';
+  const fallbackMethod = 'PATCH';
   const first = await apiRequest({ baseUrl, workflowId, apiKey, method: firstMethod, body: payload });
 
   if (first.response.ok) {
@@ -221,7 +203,8 @@ async function main() {
 
   const workflow = await readJsonWorkflow();
   const required = validateWorkflow(workflow);
-  summarizeWorkflow(workflow, required, workflowId, dryRun);
+  const payload = sanitizeWorkflow(workflow);
+  summarizeWorkflow(workflow, required, workflowId, dryRun, payload);
   assertRequiredFields(required);
 
   if (dryRun) {
@@ -254,7 +237,6 @@ async function main() {
     console.log('Active override requested and will be applied after successful workflow update.');
   }
 
-  const payload = sanitizeWorkflow(workflow);
   const { method, data } = await updateWorkflowWithFallback({
     baseUrl,
     workflowId: requiredWorkflowId,
