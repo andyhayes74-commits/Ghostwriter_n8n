@@ -47,7 +47,7 @@ Dry runs do not require n8n secrets. If `N8N_WORKFLOW_ID` is present during a dr
    - `N8N_WORKFLOW_ID`
 5. Normally leave `N8N_DEPLOY_ACTIVE` unset. Add `N8N_DEPLOY_ACTIVE=true` or `N8N_DEPLOY_ACTIVE=false` only when the GitHub deployment should explicitly activate or deactivate the workflow after a successful update.
 6. Run **Deploy Ghostwriter workflow to n8n** from the GitHub Actions tab with `dry_run=true`.
-7. Confirm the dry-run output shows the expected workflow name, node count, required fields, target workflow ID, read-only fields removed, and update payload fields.
+7. Confirm the dry-run output shows the expected workflow name, node count, required fields, target workflow ID, read-only/excluded fields removed, and the strict update payload fields: `name`, `nodes`, `connections`, `settings`.
 8. Run the same action with `dry_run=false`.
 9. Open the n8n editor and visually inspect the workflow.
 10. Test the full WordPress → n8n → WordPress generation flow.
@@ -59,8 +59,11 @@ Dry runs do not require n8n secrets. If `N8N_WORKFLOW_ID` is present during a dr
 - Do not enable automatic deployments until the manual process is tested and trusted.
 - Keep a manual export or backup of the current n8n workflow before the first deployment.
 - If deployment fails, n8n may still have the previous workflow active.
-- The deploy script removes read-only or instance-specific fields such as `id`, `versionId`, `active`, `meta`, timestamps, trigger counts, ownership fields, sharing fields, project fields, and credential usage fields before sending the update payload.
-- This self-hosted n8n instance treats `meta` as read-only, so the deploy script never sends `meta` in the update payload, even if the exported value appears generic or non-instance-specific.
+- The deploy script sends an intentionally minimal workflow update payload containing only `name`, `nodes`, `connections`, and `settings`.
+- The deploy script excludes read-only, instance-specific, optional, or separately managed fields such as `id`, `versionId`, `active`, `meta`, timestamps, trigger counts, ownership fields, sharing fields, project fields, credential usage fields, `tags`, `pinData`, and `staticData` before sending the update payload.
+- This self-hosted n8n instance treats `meta` and `tags` as read-only, so the deploy script never sends `meta` or `tags` in the update payload, even if exported values appear generic or non-instance-specific.
+- `pinData` and `staticData` are also excluded from workflow deployment updates to keep the payload strict and avoid instance-specific data changes.
+- Tags can be managed separately later if needed, but they are not part of the workflow deployment payload.
 - This self-hosted n8n instance currently accepts workflow updates with `PUT /api/v1/workflows/{id}` and returns HTTP 405 for `PATCH /api/v1/workflows/{id}`. The deploy script tries `PUT` first and only falls back to `PATCH` if `PUT` returns HTTP 405.
 - n8n treats `active` as read-only in workflow update payloads, so the deploy script never sends `active` in the PUT or PATCH body. Existing active state is left unchanged by omitting `active` from the update payload.
 - `N8N_DEPLOY_ACTIVE` should normally be left unset. If it is explicitly set, the deploy script updates the workflow first and then changes active state only through `POST /api/v1/workflows/{id}/activate` or `POST /api/v1/workflows/{id}/deactivate`.
