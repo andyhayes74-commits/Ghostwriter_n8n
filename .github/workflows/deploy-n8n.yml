@@ -11,6 +11,14 @@ on:
         options:
           - "true"
           - "false"
+  push:
+    branches:
+      - main
+    paths:
+      - "workflows/ghostwriter-story-generator-v2.import.json"
+      - "scripts/deploy-n8n-workflow.mjs"
+      - "scripts/audit-workflow.mjs"
+      - ".github/workflows/deploy-n8n.yml"
 
 jobs:
   deploy:
@@ -26,8 +34,19 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Resolve deploy mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> "$GITHUB_ENV"
+          else
+            echo "DRY_RUN=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Check deploy script syntax
         run: node --check scripts/deploy-n8n-workflow.mjs
+
+      - name: Check workflow audit script syntax
+        run: node --check scripts/audit-workflow.mjs
 
       - name: Validate workflow JSON
         run: python3 -m json.tool workflows/ghostwriter-story-generator-v2.import.json > /tmp/ghostwriter-workflow.json
@@ -41,5 +60,4 @@ jobs:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           N8N_WORKFLOW_ID: ${{ secrets.N8N_WORKFLOW_ID }}
           N8N_DEPLOY_ACTIVE: ${{ secrets.N8N_DEPLOY_ACTIVE }}
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: node scripts/deploy-n8n-workflow.mjs
